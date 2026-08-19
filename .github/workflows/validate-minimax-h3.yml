@@ -1,0 +1,34 @@
+name: Validate MiniMax H3 workflows
+
+on:
+  pull_request:
+    paths:
+      - "minimax-h3/**"
+      - ".github/workflows/validate-minimax-h3.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "minimax-h3/**"
+      - ".github/workflows/validate-minimax-h3.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile validator
+        run: python -m py_compile minimax-h3/tools/validate_workflows.py
+
+      - name: Validate workflow JSON
+        run: python minimax-h3/tools/validate_workflows.py minimax-h3
