@@ -39,23 +39,16 @@ jobs:
       - name: Install official Comfy validator
         run: python -m pip install "comfy-cli==${COMFY_CLI_VERSION}"
 
-      - name: Compile validation helpers
+      - name: Verify comfy-cli and compile validation helpers
         run: |
+          python -m comfy_cli --version
           python -m py_compile minimax-h3/tools/validate_workflows.py
           python -m py_compile minimax-h3/tools/comfy_validate.py
 
-      - name: Parse frontend workflows with comfy-cli
-        shell: bash
-        run: |
-          set -euo pipefail
-          while IFS= read -r -d '' workflow; do
-            echo "Checking frontend export: ${workflow}"
-            python -m comfy_cli --json --skip-prompt workflow notes "${workflow}" >/dev/null
-          done < <(find minimax-h3 -maxdepth 1 -type f -name '*.json' -print0)
-
-      # A pinned object_info snapshot makes official validation reproducible on
-      # a GitHub-hosted runner. Until the snapshot is committed, the live
-      # self-hosted job below is the authoritative Comfy-aware validation.
+      # Official workflow validation needs the node schemas used by the export.
+      # A pinned object_info snapshot makes this reproducible without launching
+      # ComfyUI. Until one is committed, repository-specific static validation
+      # below remains active and the self-hosted job provides the live path.
       - name: Validate against pinned ComfyUI schema snapshot
         if: ${{ hashFiles('minimax-h3/ci/object_info.json') != '' }}
         run: >-
