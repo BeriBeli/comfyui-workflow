@@ -44,6 +44,10 @@ jobs:
           python -m comfy_cli --version
           python -m py_compile minimax-h3/tools/validate_workflows.py
           python -m py_compile minimax-h3/tools/comfy_validate.py
+          python -m py_compile minimax-h3/tools/test_validate_workflows.py
+
+      - name: Run workflow validator regression tests
+        run: python -m unittest discover -s minimax-h3/tools -p "test_*.py"
 
       # Official workflow validation needs the node schemas used by the export.
       # A pinned object_info snapshot makes this reproducible without launching
