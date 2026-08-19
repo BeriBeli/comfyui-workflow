@@ -1,0 +1,92 @@
+name: Validate MiniMax H3 workflows
+
+on:
+  pull_request:
+    paths:
+      - "minimax-h3/**"
+      - ".github/workflows/validate-minimax-h3.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "minimax-h3/**"
+      - ".github/workflows/validate-minimax-h3.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Pinned so a new comfy-cli release cannot silently change CI semantics.
+  COMFY_CLI_VERSION: "1.13.0"
+  DO_NOT_TRACK: "1"
+  COMFY_NO_TELEMETRY: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  static:
+    name: Static and policy validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install official Comfy validator
+        run: python -m pip install "comfy-cli==${COMFY_CLI_VERSION}"
+
+      - name: Verify comfy-cli and compile validation helpers
+        run: |
+          python -m comfy_cli --version
+          python -m py_compile minimax-h3/tools/validate_workflows.py
+          python -m py_compile minimax-h3/tools/comfy_validate.py
+          python -m py_compile minimax-h3/tools/test_validate_workflows.py
+
+      - name: Run workflow validator regression tests
+        run: python -m unittest discover -s minimax-h3/tools -p "test_*.py"
+
+      # Official workflow validation needs the node schemas used by the export.
+      # A pinned object_info snapshot makes this reproducible without launching
+      # ComfyUI. Until one is committed, repository-specific static validation
+      # below remains active and the self-hosted job provides the live path.
+      - name: Validate against pinned ComfyUI schema snapshot
+        if: ${{ hashFiles('minimax-h3/ci/object_info.json') != '' }}
+        run: >-
+          python minimax-h3/tools/comfy_validate.py minimax-h3
+          --object-info minimax-h3/ci/object_info.json
+
+      - name: Validate MiniMax H3 repository policies
+        run: python minimax-h3/tools/validate_workflows.py minimax-h3
+
+  live-comfy:
+    name: Live ComfyUI schema validation
+    # Enable after registering a runner labelled `comfyui` whose tested ComfyUI
+    # instance has every required custom node loaded. GitHub-hosted runners do
+    # not have the repository's NVIDIA/custom-node environment.
+    if: ${{ vars.COMFY_LIVE_VALIDATION == 'true' }}
+    runs-on: [self-hosted, comfyui]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install official Comfy validator
+        run: python -m pip install "comfy-cli==${COMFY_CLI_VERSION}"
+
+      - name: Validate workflows against the running ComfyUI
+        env:
+          COMFY_VALIDATE_HOST: ${{ vars.COMFY_VALIDATE_HOST }}
+          COMFY_VALIDATE_PORT: ${{ vars.COMFY_VALIDATE_PORT }}
+        run: python minimax-h3/tools/comfy_validate.py minimax-h3
+
+      # comfy-mcp is intentionally not installed here: its workflow validator
+      # shells out to the same comfy-cli command. MCP protocol compatibility is
+      # a separate agent-integration smoke test, not a second validation engine.
