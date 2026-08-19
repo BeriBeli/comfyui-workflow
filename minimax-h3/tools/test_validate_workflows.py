@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,6 +15,7 @@ SPEC = importlib.util.spec_from_file_location("validate_workflows", MODULE_PATH)
 if SPEC is None or SPEC.loader is None:  # pragma: no cover - import bootstrap guard
     raise RuntimeError(f"cannot load validator from {MODULE_PATH}")
 validator = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = validator
 SPEC.loader.exec_module(validator)
 
 
