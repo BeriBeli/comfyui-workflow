@@ -24,6 +24,11 @@ LATENT_MP_RE = re.compile(r"Latent(?P<mp>\d+(?:\.\d+)?)MP", re.IGNORECASE)
 SEGMENT_RE = re.compile(r"Segment\s*(?P<index>[123])", re.IGNORECASE)
 FRAME_COUNT_RE = re.compile(r"(?P<frames>\d+)\s*Frames?", re.IGNORECASE)
 
+# Auxiliary JSON must be explicitly identified. Never infer that a JSON file is
+# auxiliary merely because its ``nodes`` array is missing: that would also hide
+# an accidentally emptied or damaged workflow export from CI.
+AUXILIARY_JSON_SUFFIXES = frozenset({("ci", "object_info.json")})
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -475,6 +480,13 @@ def load_workflow(path: Path) -> dict[str, Any]:
     return document
 
 
+def is_known_auxiliary_json(path: Path) -> bool:
+    """Return whether ``path`` is an explicitly supported non-workflow JSON."""
+
+    parts = path.parts
+    return len(parts) >= 2 and tuple(parts[-2:]) in AUXILIARY_JSON_SUFFIXES
+
+
 def validate_paths(paths: Iterable[Path]) -> list[Finding]:
     findings: list[Finding] = []
     for path in paths:
@@ -483,9 +495,10 @@ def validate_paths(paths: Iterable[Path]) -> list[Finding]:
         except (OSError, json.JSONDecodeError, ValueError) as exc:
             findings.append(Finding("ERROR", "JSON_LOAD_FAILED", path, "root", str(exc)))
             continue
-        if "nodes" not in document:
-            # Non-workflow JSON files are allowed to live beside workflows.
-            findings.append(Finding("INFO", "SKIPPED_NON_WORKFLOW", path, "root", "no nodes array"))
+        if is_known_auxiliary_json(path):
+            findings.append(
+                Finding("INFO", "SKIPPED_AUXILIARY_JSON", path, "root", "explicitly allowed object_info snapshot")
+            )
             continue
         findings.extend(WorkflowValidator(path, document).validate())
     return findings
