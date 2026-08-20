@@ -50,6 +50,9 @@ models/
 *.jpeg
 *.webp
 
+# Small, documentation-only previews are intentional repository artifacts.
+!minimax-h3/previews/*.mp4
+
 # Model weights
 *.safetensors
 *.ckpt

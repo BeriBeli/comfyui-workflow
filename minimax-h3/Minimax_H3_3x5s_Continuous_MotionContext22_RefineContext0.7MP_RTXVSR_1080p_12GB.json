@@ -1,8 +1,8 @@
 {
   "id": "3e7a1054-8e67-4027-80f6-0ffe498e5ca9",
-  "revision": 0,
+  "revision": 2,
   "last_node_id": 160,
-  "last_link_id": 419,
+  "last_link_id": 453,
   "nodes": [
     {
       "id": 116,
@@ -95,7 +95,7 @@
       "title": "3×5s 连续分段 / 12GB RTX 5070",
       "properties": {},
       "widgets_values": [
-        "## MiniMax H3：3×5 秒连续分段\n\n- Segment 1：T2VA；Segment 2/3：上一段 refined 视频末帧自动接入 first_frame 的 I2VA。\n- 每段：0.3MP 首遍、LightX2V Turbo 8 steps、H3 latent 0.7MP、二次 6 steps / denoise 0.30。\n- Segment 2/3 的二次 refine 使用无首帧文本条件，避免 I2V 图像 token 与放大 latent 的空间尺寸冲突；首遍 I2V 已把连续性写入 latent。\n- 两个边界各使用 RIFE v4.26 生成 4 张中间帧，并等量裁掉边界附近原帧；合并后仍为 370 帧，24fps，约 15.42 秒。\n- 音频同步按段生成，后两段各裁掉约 0.04 秒后顺序拼接。\n- 最终同时保存约 1120×640 合并原片与 RTX VSR **精确 1920×1080** 版本。\n\n连续性依赖上一段末帧、匹配的 I2VA 提示词、固定场景/镜头/肤质描述；生成模型无法提供逐像素绝对保证。"
+        "## Motion Context at both H3 stages\n\nS2/S3 receive the previous segment's 22-frame AV latent tail twice: once at the 0.3MP first pass and again from the previous segment's 0.7MP refined latent before the six-step denoise=0.30 sampler. This keeps the quality branch while preventing each refine pass from independently redrawing the join. Only the existing 22-frame head is trimmed after decode. Final total remains 370 frames at 24fps."
       ],
       "color": "#1f4f46",
       "bgcolor": "#102d28"
@@ -150,7 +150,6 @@
           "name": "width",
           "type": "INT",
           "links": [
-            219,
             366,
             368,
             370
@@ -161,7 +160,6 @@
           "name": "height",
           "type": "INT",
           "links": [
-            220,
             367,
             369,
             371
@@ -328,6 +326,22 @@
             372,
             373
           ]
+        },
+        {
+          "localized_name": "BASE_CONTEXT_LATENT",
+          "name": "BASE_CONTEXT_LATENT",
+          "type": "LATENT",
+          "links": [
+            439
+          ]
+        },
+        {
+          "localized_name": "REFINED_CONTEXT_LATENT",
+          "name": "REFINED_CONTEXT_LATENT",
+          "type": "LATENT",
+          "links": [
+            452
+          ]
         }
       ],
       "properties": {
@@ -349,7 +363,7 @@
         8,
         "euler"
       ],
-      "title": "Segment 1 · T2VA · 5.17s"
+      "title": "Segment 1 · T2VA · 124f + Context Latent"
     },
     {
       "id": 131,
@@ -370,7 +384,7 @@
           "name": "first_frame",
           "shape": 7,
           "type": "IMAGE",
-          "link": 375
+          "link": null
         },
         {
           "name": "last_frame",
@@ -491,6 +505,18 @@
             "name": "sampler_name"
           },
           "link": null
+        },
+        {
+          "name": "context_latent",
+          "shape": 7,
+          "type": "LATENT",
+          "link": 439
+        },
+        {
+          "name": "refined_context_latent",
+          "shape": 7,
+          "type": "LATENT",
+          "link": 452
         }
       ],
       "outputs": [
@@ -502,16 +528,32 @@
             376,
             377
           ]
+        },
+        {
+          "localized_name": "BASE_CONTEXT_LATENT",
+          "name": "BASE_CONTEXT_LATENT",
+          "type": "LATENT",
+          "links": [
+            440
+          ]
+        },
+        {
+          "localized_name": "REFINED_CONTEXT_LATENT",
+          "name": "REFINED_CONTEXT_LATENT",
+          "type": "LATENT",
+          "links": [
+            453
+          ]
         }
       ],
       "properties": {
         "previewExposures": []
       },
       "widgets_values": [
-        "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn Japanese fantasy animation; the young adult woman, tiny forest spirit, countryside kitchen, and composition shown in <Picture 1> are preserved exactly, including her cream blouse, moss-green overalls, red ribbon, the spirit’s leaf-shaped ears, the red apple, wicker basket, wooden table, open window, golden daylight, watercolor background, pencil linework, camera height, and spatial relationships. The opening frame continues the previous segment without a reset. The camera continues trucking right with small amplitude at slow speed. From 0.00 to 1.20 seconds, her reaching hand and the spirit’s curious head tilt continue seamlessly. From 1.20 to 4.20 seconds, the spirit pushes the apple into her palm, hops onto the table, and shakes a trail of tiny glowing seeds from its leaf-shaped ears; she watches in delighted surprise as two sprouts emerge from a clay pot. From 4.20 to 5.17 seconds, she lifts the pot slightly while the spirit balances beside it, ending with the sprouts unfurling toward the window in a stable pose for the next segment. Preserve the exact character designs, clothing, props, lighting, watercolor texture, and gentle cel animation. Avoid violence, horror, and photorealism, identity change, camera jump, scene change, morphing, duplicate limbs, cuts, text, logos, or watermarks.\n\noverall_soundscape: The same cicadas, birdsong, and leaf-filled breeze continue at matching levels. The apple taps softly into her palm, tiny paws patter on wood, seeds tinkle like faint glass bells, and new leaves unfurl with a delicate papery rustle.\n\nnon_diegetic_music: The same celesta, pizzicato strings, and wooden flute waltz continues seamlessly, adding a brief rising flute phrase as the sprouts appear.",
+        "integrated_multimodal_description: [Shot 1] 2D hand-drawn Japanese fantasy animation in one uninterrupted eye-level medium-wide shot inside the same sunlit countryside kitchen. The exact young adult woman, tiny round leaf-eared forest spirit, red apple, wicker basket, old wooden table, open window, golden daylight, watercolor background, pencil linework, camera height, and spatial relationships continue from the preceding clip. From 0.00 to 2.00 seconds, preserve the preceding clip's exact closing framing while her reaching hand continues its existing motion, the spirit maintains its curious head tilt with a small breath and weight shift, and the camera continues the same slow small-amplitude truck right; do not reset poses or introduce any new object. From 2.00 to 4.90 seconds, the spirit finishes rolling the same red apple into her palm, climbs onto the table beside her hand, and watches as she gently places the apple on the tabletop. From 4.90 to 5.88 seconds, she and the spirit settle beside the apple in a stable shared eyeline that can continue into the next clip. Preserve exact identities, clothing, proportions, lighting, watercolor texture, hand and paw anatomy, and continuous camera velocity. No cut, scene change, camera jump, pose reset, new plant, pot, flower, vine, glow, duplicate limb, morphing, text, logo, or watermark.\n\noverall_soundscape: The same summer cicadas, birdsong, leaf-filled breeze, and quiet kitchen room tone continue at matching levels. The apple rolls and taps softly on wood, fabric rustles, tiny paws patter on the tabletop, and the spirit gives one restrained chirp.\n\nnon_diegetic_music: The same celesta, pizzicato strings, and wooden-flute waltz continues at the same tempo and level without restarting, with one short flute phrase near the end.",
         736,
         416,
-        5,
+        5.875,
         235193101725076,
         "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
         "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
@@ -523,7 +565,7 @@
         8,
         "euler"
       ],
-      "title": "Segment 2 · I2VA · 5.17s"
+      "title": "Segment 2 · Motion Context 22f · Raw 141 / Delivered 119f"
     },
     {
       "id": 135,
@@ -544,7 +586,7 @@
           "name": "first_frame",
           "shape": 7,
           "type": "IMAGE",
-          "link": 379
+          "link": null
         },
         {
           "name": "last_frame",
@@ -665,6 +707,18 @@
             "name": "sampler_name"
           },
           "link": null
+        },
+        {
+          "name": "context_latent",
+          "shape": 7,
+          "type": "LATENT",
+          "link": 440
+        },
+        {
+          "name": "refined_context_latent",
+          "shape": 7,
+          "type": "LATENT",
+          "link": 453
         }
       ],
       "outputs": [
@@ -676,16 +730,28 @@
             380,
             381
           ]
+        },
+        {
+          "localized_name": "BASE_CONTEXT_LATENT",
+          "name": "BASE_CONTEXT_LATENT",
+          "type": "LATENT",
+          "links": []
+        },
+        {
+          "localized_name": "REFINED_CONTEXT_LATENT",
+          "name": "REFINED_CONTEXT_LATENT",
+          "type": "LATENT",
+          "links": []
         }
       ],
       "properties": {
         "previewExposures": []
       },
       "widgets_values": [
-        "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn Japanese fantasy animation; every visual anchor in <Picture 1> is preserved exactly: the young adult woman’s face, short dark hair, cream blouse, moss-green overalls and red ribbon; the tiny leaf-eared forest spirit; the red apple, wicker basket, wooden table, clay pot, fresh sprouts, open window, golden daylight, watercolor background, pencil linework, camera height, and spatial relationships. The opening frame is a direct continuation with no reset, and the camera completes the same slow small-amplitude truck right. From 0.00 to 1.20 seconds, she steadies the clay pot while the spirit remains balanced beside the sprouts. From 1.20 to 3.80 seconds, the sprouts grow into a curling vine dotted with small white flowers, gently circling the window frame as she laughs silently and the spirit claps its paws. From 3.80 to 4.60 seconds, a blue butterfly enters through the window and lands on the spirit’s leaf-shaped ear. From 4.60 to 5.17 seconds, everyone becomes still in a peaceful final tableau as warm light brightens the kitchen. Preserve stable character designs, coherent hands and paws, restrained natural motion, watercolor textures, and continuous lighting. Avoid violence, horror, and photorealism, identity change, camera jump, scene change, morphing, duplicate limbs, cuts, text, logos, or watermarks.\n\noverall_soundscape: Cicadas, birdsong, and the soft breeze remain continuous. Growing vines produce a faint leafy rustle, the spirit gives two quiet chirps, butterfly wings flutter close by, and the room settles into calm summer ambience.\n\nnon_diegetic_music: The celesta and pizzicato-string waltz gently expands with warm wooden-flute harmony, then resolves on one sustained celesta note.",
+        "integrated_multimodal_description: [Shot 1] 2D hand-drawn Japanese fantasy animation in the same uninterrupted eye-level medium-wide kitchen shot. The exact woman, leaf-eared forest spirit, red apple, wicker basket, wooden table, open window, golden daylight, watercolor background, pencil linework, camera height, and spatial relationships continue from the preceding clip. From 0.00 to 2.00 seconds, hold the preceding clip's exact closing composition while the woman's breathing, the spirit's balance beside the apple, their shared eyeline, and the slow small-amplitude truck right continue naturally; do not reset the pose or add any object. From 2.00 to 5.40 seconds, the spirit taps the same apple twice with one paw, the woman quietly laughs with closed lips, and she slides the wicker basket closer so the spirit can step back into it. From 5.40 to 6.58 seconds, the spirit settles inside the basket with its leaf-shaped ears still visible while the woman rests one hand beside the apple and both look toward the open window, ending in a peaceful stable tableau. Preserve exact identities, clothing, proportions, props, lighting, watercolor texture, coherent hands and paws, and continuous camera velocity. No cut, scene change, camera jump, pose reset, new plant, pot, flower, vine, butterfly, glow, duplicate limb, morphing, text, logo, or watermark.\n\noverall_soundscape: Cicadas, birdsong, the soft breeze, and the same kitchen room tone remain continuous at matching levels. Two quiet apple taps, a small wicker creak, fabric movement, and a soft settling rustle are heard without an ambience restart.\n\nnon_diegetic_music: The existing celesta and pizzicato-string waltz continues at the same tempo, joined by a restrained wooden-flute cadence and one sustained final celesta note.",
         736,
         416,
-        5,
+        6.5833333333,
         235193101725093,
         "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
         "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
@@ -697,7 +763,7 @@
         8,
         "euler"
       ],
-      "title": "Segment 3 · I2VA · 5.17s"
+      "title": "Segment 3 · Motion Context 22f · Raw 158 / Delivered 136f"
     },
     {
       "id": 122,
@@ -727,8 +793,7 @@
           "name": "images",
           "type": "IMAGE",
           "links": [
-            374,
-            382
+            397
           ]
         },
         {
@@ -798,9 +863,7 @@
           "name": "images",
           "type": "IMAGE",
           "links": [
-            378,
-            383,
-            385
+            398
           ]
         },
         {
@@ -808,7 +871,7 @@
           "name": "audio",
           "type": "AUDIO",
           "links": [
-            405
+            408
           ]
         },
         {
@@ -867,8 +930,7 @@
           "name": "images",
           "type": "IMAGE",
           "links": [
-            384,
-            386
+            384
           ]
         },
         {
@@ -968,7 +1030,7 @@
         "Node name for S&R": "SaveVideo"
       },
       "widgets_values": [
-        "video/H3_Chain_Segment01_T2VA_0.7MP",
+        "video/H3_MC22_RC07_Segment1",
         "auto",
         "auto"
       ],
@@ -1035,7 +1097,7 @@
         "Node name for S&R": "SaveVideo"
       },
       "widgets_values": [
-        "video/H3_Chain_Segment02_I2VA_0.7MP",
+        "video/H3_MC22_RC07_Segment2",
         "auto",
         "auto"
       ],
@@ -1102,233 +1164,11 @@
         "Node name for S&R": "SaveVideo"
       },
       "widgets_values": [
-        "video/H3_Chain_Segment03_I2VA_0.7MP",
+        "video/H3_MC22_RC07_Segment3",
         "auto",
         "auto"
       ],
       "title": "Save Segment 3"
-    },
-    {
-      "id": 133,
-      "type": "ImageFromBatch",
-      "pos": [
-        -940,
-        430
-      ],
-      "size": [
-        240,
-        105
-      ],
-      "flags": {},
-      "order": 133,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 374
-        },
-        {
-          "name": "batch_index",
-          "type": "INT",
-          "widget": {
-            "name": "batch_index"
-          },
-          "link": null
-        },
-        {
-          "name": "length",
-          "type": "INT",
-          "widget": {
-            "name": "length"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            375,
-            387
-          ]
-        }
-      ],
-      "title": "Last Frame → Segment 2",
-      "properties": {
-        "Node name for S&R": "ImageFromBatch"
-      },
-      "widgets_values": [
-        -1,
-        1
-      ]
-    },
-    {
-      "id": 137,
-      "type": "ImageFromBatch",
-      "pos": [
-        360,
-        430
-      ],
-      "size": [
-        240,
-        105
-      ],
-      "flags": {},
-      "order": 137,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 378
-        },
-        {
-          "name": "batch_index",
-          "type": "INT",
-          "widget": {
-            "name": "batch_index"
-          },
-          "link": null
-        },
-        {
-          "name": "length",
-          "type": "INT",
-          "widget": {
-            "name": "length"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            379,
-            389
-          ]
-        }
-      ],
-      "title": "Last Frame → Segment 3",
-      "properties": {
-        "Node name for S&R": "ImageFromBatch"
-      },
-      "widgets_values": [
-        -1,
-        1
-      ]
-    },
-    {
-      "id": 139,
-      "type": "ImageFromBatch",
-      "pos": [
-        -1320,
-        1200
-      ],
-      "size": [
-        240,
-        105
-      ],
-      "flags": {},
-      "order": 139,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 382
-        },
-        {
-          "name": "batch_index",
-          "type": "INT",
-          "widget": {
-            "name": "batch_index"
-          },
-          "link": null
-        },
-        {
-          "name": "length",
-          "type": "INT",
-          "widget": {
-            "name": "length"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            397
-          ]
-        }
-      ],
-      "title": "Segment 1 · Keep Frames 0–121",
-      "properties": {
-        "Node name for S&R": "ImageFromBatch"
-      },
-      "widgets_values": [
-        0,
-        122
-      ]
-    },
-    {
-      "id": 140,
-      "type": "ImageFromBatch",
-      "pos": [
-        -20,
-        1200
-      ],
-      "size": [
-        240,
-        105
-      ],
-      "flags": {},
-      "order": 140,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 383
-        },
-        {
-          "name": "batch_index",
-          "type": "INT",
-          "widget": {
-            "name": "batch_index"
-          },
-          "link": null
-        },
-        {
-          "name": "length",
-          "type": "INT",
-          "widget": {
-            "name": "length"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            400
-          ]
-        }
-      ],
-      "title": "Segment 2 · Keep Frames 3–121",
-      "properties": {
-        "Node name for S&R": "ImageFromBatch"
-      },
-      "widgets_values": [
-        3,
-        119
-      ]
     },
     {
       "id": 141,
@@ -1372,210 +1212,18 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            404
+            400
           ]
         }
       ],
-      "title": "Segment 3 · Keep Frames 3–123",
-      "properties": {
-        "Node name for S&R": "ImageFromBatch"
-      },
-      "widgets_values": [
-        3,
-        121
-      ]
-    },
-    {
-      "id": 142,
-      "type": "ImageFromBatch",
-      "pos": [
-        -20,
-        1040
-      ],
-      "size": [
-        240,
-        105
-      ],
-      "flags": {},
-      "order": 142,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 385
-        },
-        {
-          "name": "batch_index",
-          "type": "INT",
-          "widget": {
-            "name": "batch_index"
-          },
-          "link": null
-        },
-        {
-          "name": "length",
-          "type": "INT",
-          "widget": {
-            "name": "length"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            388
-          ]
-        }
-      ],
-      "title": "Segment 2 First Frame",
+      "title": "Segment 3 · Keep 127 Frames (Final Total 370)",
       "properties": {
         "Node name for S&R": "ImageFromBatch"
       },
       "widgets_values": [
         0,
-        1
+        127
       ]
-    },
-    {
-      "id": 149,
-      "type": "ImageFromBatch",
-      "pos": [
-        1280,
-        1040
-      ],
-      "size": [
-        240,
-        105
-      ],
-      "flags": {},
-      "order": 149,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 386
-        },
-        {
-          "name": "batch_index",
-          "type": "INT",
-          "widget": {
-            "name": "batch_index"
-          },
-          "link": null
-        },
-        {
-          "name": "length",
-          "type": "INT",
-          "widget": {
-            "name": "length"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            390
-          ]
-        }
-      ],
-      "title": "Segment 3 First Frame",
-      "properties": {
-        "Node name for S&R": "ImageFromBatch"
-      },
-      "widgets_values": [
-        0,
-        1
-      ]
-    },
-    {
-      "id": 150,
-      "type": "ImageBatch",
-      "pos": [
-        -620,
-        1180
-      ],
-      "size": [
-        220,
-        80
-      ],
-      "flags": {},
-      "order": 150,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image1",
-          "type": "IMAGE",
-          "link": 387
-        },
-        {
-          "name": "image2",
-          "type": "IMAGE",
-          "link": 388
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            393
-          ]
-        }
-      ],
-      "title": "Boundary 1 Endpoints",
-      "properties": {
-        "Node name for S&R": "ImageBatch"
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 151,
-      "type": "ImageBatch",
-      "pos": [
-        680,
-        1180
-      ],
-      "size": [
-        220,
-        80
-      ],
-      "flags": {},
-      "order": 151,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image1",
-          "type": "IMAGE",
-          "link": 389
-        },
-        {
-          "name": "image2",
-          "type": "IMAGE",
-          "link": 390
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            394
-          ]
-        }
-      ],
-      "title": "Boundary 2 Endpoints",
-      "properties": {
-        "Node name for S&R": "ImageBatch"
-      },
-      "widgets_values": []
     },
     {
       "id": 157,
@@ -1612,7 +1260,7 @@
           ]
         }
       ],
-      "title": "Segment 1 + Transition 1",
+      "title": "Segment 1 + Motion-Trimmed Segment 2",
       "properties": {
         "Node name for S&R": "ImageBatch"
       },
@@ -1649,407 +1297,16 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            401
-          ]
-        }
-      ],
-      "title": "Add Segment 2",
-      "properties": {
-        "Node name for S&R": "ImageBatch"
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 159,
-      "type": "ImageBatch",
-      "pos": [
-        50,
-        1480
-      ],
-      "size": [
-        220,
-        80
-      ],
-      "flags": {},
-      "order": 159,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image1",
-          "type": "IMAGE",
-          "link": 401
-        },
-        {
-          "name": "image2",
-          "type": "IMAGE",
-          "link": 402
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            403
-          ]
-        }
-      ],
-      "title": "Add Transition 2",
-      "properties": {
-        "Node name for S&R": "ImageBatch"
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 160,
-      "type": "ImageBatch",
-      "pos": [
-        500,
-        1480
-      ],
-      "size": [
-        220,
-        80
-      ],
-      "flags": {},
-      "order": 160,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image1",
-          "type": "IMAGE",
-          "link": 403
-        },
-        {
-          "name": "image2",
-          "type": "IMAGE",
-          "link": 404
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
             411,
             415
           ]
         }
       ],
-      "title": "Add Segment 3 · 370 Frames",
+      "title": "Add Segment 3 Tail-Trimmed · 370 Frames",
       "properties": {
         "Node name for S&R": "ImageBatch"
       },
       "widgets_values": []
-    },
-    {
-      "id": 152,
-      "type": "FrameInterpolationModelLoader",
-      "pos": [
-        20,
-        920
-      ],
-      "size": [
-        300,
-        85
-      ],
-      "flags": {},
-      "order": 152,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model_name",
-          "type": "COMBO",
-          "widget": {
-            "name": "model_name"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "INTERP_MODEL",
-          "type": "INTERP_MODEL",
-          "links": [
-            391,
-            392
-          ]
-        }
-      ],
-      "title": "RIFE v4.26 · Shared Loader",
-      "properties": {
-        "Node name for S&R": "FrameInterpolationModelLoader"
-      },
-      "widgets_values": [
-        "rife_v4.26.safetensors"
-      ]
-    },
-    {
-      "id": 153,
-      "type": "FrameInterpolate",
-      "pos": [
-        -600,
-        1320
-      ],
-      "size": [
-        280,
-        105
-      ],
-      "flags": {},
-      "order": 153,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "interp_model",
-          "type": "INTERP_MODEL",
-          "link": 391
-        },
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 393
-        },
-        {
-          "name": "multiplier",
-          "type": "INT",
-          "widget": {
-            "name": "multiplier"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            395
-          ]
-        }
-      ],
-      "title": "Boundary 1 · RIFE ×5",
-      "properties": {
-        "Node name for S&R": "FrameInterpolate"
-      },
-      "widgets_values": [
-        5
-      ]
-    },
-    {
-      "id": 154,
-      "type": "FrameInterpolate",
-      "pos": [
-        700,
-        1320
-      ],
-      "size": [
-        280,
-        105
-      ],
-      "flags": {},
-      "order": 154,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "interp_model",
-          "type": "INTERP_MODEL",
-          "link": 392
-        },
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 394
-        },
-        {
-          "name": "multiplier",
-          "type": "INT",
-          "widget": {
-            "name": "multiplier"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            396
-          ]
-        }
-      ],
-      "title": "Boundary 2 · RIFE ×5",
-      "properties": {
-        "Node name for S&R": "FrameInterpolate"
-      },
-      "widgets_values": [
-        5
-      ]
-    },
-    {
-      "id": 155,
-      "type": "ImageFromBatch",
-      "pos": [
-        -300,
-        1320
-      ],
-      "size": [
-        240,
-        105
-      ],
-      "flags": {},
-      "order": 155,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 395
-        },
-        {
-          "name": "batch_index",
-          "type": "INT",
-          "widget": {
-            "name": "batch_index"
-          },
-          "link": null
-        },
-        {
-          "name": "length",
-          "type": "INT",
-          "widget": {
-            "name": "length"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            398
-          ]
-        }
-      ],
-      "title": "Boundary 1 · Keep 4 Intermediate Frames",
-      "properties": {
-        "Node name for S&R": "ImageFromBatch"
-      },
-      "widgets_values": [
-        1,
-        4
-      ]
-    },
-    {
-      "id": 156,
-      "type": "ImageFromBatch",
-      "pos": [
-        1000,
-        1320
-      ],
-      "size": [
-        240,
-        105
-      ],
-      "flags": {},
-      "order": 156,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 396
-        },
-        {
-          "name": "batch_index",
-          "type": "INT",
-          "widget": {
-            "name": "batch_index"
-          },
-          "link": null
-        },
-        {
-          "name": "length",
-          "type": "INT",
-          "widget": {
-            "name": "length"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            402
-          ]
-        }
-      ],
-      "title": "Boundary 2 · Keep 4 Intermediate Frames",
-      "properties": {
-        "Node name for S&R": "ImageFromBatch"
-      },
-      "widgets_values": [
-        1,
-        4
-      ]
-    },
-    {
-      "id": 143,
-      "type": "TrimAudioDuration",
-      "pos": [
-        -20,
-        1530
-      ],
-      "size": [
-        250,
-        105
-      ],
-      "flags": {},
-      "order": 143,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "audio",
-          "type": "AUDIO",
-          "link": 405
-        },
-        {
-          "name": "start_index",
-          "type": "FLOAT",
-          "widget": {
-            "name": "start_index"
-          },
-          "link": null
-        },
-        {
-          "name": "duration",
-          "type": "FLOAT",
-          "widget": {
-            "name": "duration"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "AUDIO",
-          "type": "AUDIO",
-          "links": [
-            408
-          ]
-        }
-      ],
-      "title": "Trim Segment 2 Audio Boundary",
-      "properties": {
-        "Node name for S&R": "TrimAudioDuration"
-      },
-      "widgets_values": [
-        0.04,
-        5.13
-      ]
     },
     {
       "id": 144,
@@ -2097,13 +1354,13 @@
           ]
         }
       ],
-      "title": "Trim Segment 3 Audio Boundary",
+      "title": "Segment 3 Audio · Keep 127/24s",
       "properties": {
         "Node name for S&R": "TrimAudioDuration"
       },
       "widgets_values": [
-        0.04,
-        5.13
+        0.0,
+        5.291666666666667
       ]
     },
     {
@@ -2283,7 +1540,7 @@
         24,
         8
       ],
-      "title": "Create Combined 15.42s Video"
+      "title": "Create Motion Context Combined 370f / 15.42s"
     },
     {
       "id": 148,
@@ -2355,7 +1612,7 @@
         "Node name for S&R": "SaveVideo"
       },
       "widgets_values": [
-        "video/H3_Chain_3x5s_Combined_0.7MP",
+        "video/H3_MC22_RC07_Combined_0.7MP",
         "auto",
         "auto"
       ],
@@ -2590,7 +1847,7 @@
         "Node name for S&R": "SaveVideo"
       },
       "widgets_values": [
-        "video/H3_Chain_3x5s_Combined_RTXVSR_1080p",
+        "video/H3_MC22_RC07_RTXVSR_1080p",
         "auto",
         "auto"
       ],
@@ -2663,22 +1920,6 @@
       "VIDEO"
     ],
     [
-      374,
-      122,
-      0,
-      133,
-      0,
-      "IMAGE"
-    ],
-    [
-      375,
-      133,
-      0,
-      131,
-      0,
-      "IMAGE"
-    ],
-    [
       376,
       131,
       0,
@@ -2693,22 +1934,6 @@
       134,
       0,
       "VIDEO"
-    ],
-    [
-      378,
-      132,
-      0,
-      137,
-      0,
-      "IMAGE"
-    ],
-    [
-      379,
-      137,
-      0,
-      135,
-      0,
-      "IMAGE"
     ],
     [
       380,
@@ -2727,22 +1952,6 @@
       "VIDEO"
     ],
     [
-      382,
-      122,
-      0,
-      139,
-      0,
-      "IMAGE"
-    ],
-    [
-      383,
-      132,
-      0,
-      140,
-      0,
-      "IMAGE"
-    ],
-    [
       384,
       136,
       0,
@@ -2751,104 +1960,8 @@
       "IMAGE"
     ],
     [
-      385,
-      132,
-      0,
-      142,
-      0,
-      "IMAGE"
-    ],
-    [
-      386,
-      136,
-      0,
-      149,
-      0,
-      "IMAGE"
-    ],
-    [
-      387,
-      133,
-      0,
-      150,
-      0,
-      "IMAGE"
-    ],
-    [
-      388,
-      142,
-      0,
-      150,
-      1,
-      "IMAGE"
-    ],
-    [
-      389,
-      137,
-      0,
-      151,
-      0,
-      "IMAGE"
-    ],
-    [
-      390,
-      149,
-      0,
-      151,
-      1,
-      "IMAGE"
-    ],
-    [
-      391,
-      152,
-      0,
-      153,
-      0,
-      "INTERP_MODEL"
-    ],
-    [
-      392,
-      152,
-      0,
-      154,
-      0,
-      "INTERP_MODEL"
-    ],
-    [
-      393,
-      150,
-      0,
-      153,
-      1,
-      "IMAGE"
-    ],
-    [
-      394,
-      151,
-      0,
-      154,
-      1,
-      "IMAGE"
-    ],
-    [
-      395,
-      153,
-      0,
-      155,
-      0,
-      "IMAGE"
-    ],
-    [
-      396,
-      154,
-      0,
-      156,
-      0,
-      "IMAGE"
-    ],
-    [
       397,
-      139,
+      122,
       0,
       157,
       0,
@@ -2856,7 +1969,7 @@
     ],
     [
       398,
-      155,
+      132,
       0,
       157,
       1,
@@ -2872,51 +1985,11 @@
     ],
     [
       400,
-      140,
-      0,
-      158,
-      1,
-      "IMAGE"
-    ],
-    [
-      401,
-      158,
-      0,
-      159,
-      0,
-      "IMAGE"
-    ],
-    [
-      402,
-      156,
-      0,
-      159,
-      1,
-      "IMAGE"
-    ],
-    [
-      403,
-      159,
-      0,
-      160,
-      0,
-      "IMAGE"
-    ],
-    [
-      404,
       141,
       0,
-      160,
+      158,
       1,
       "IMAGE"
-    ],
-    [
-      405,
-      132,
-      1,
-      143,
-      0,
-      "AUDIO"
     ],
     [
       406,
@@ -2936,8 +2009,8 @@
     ],
     [
       408,
-      143,
-      0,
+      132,
+      1,
       145,
       1,
       "AUDIO"
@@ -2960,7 +2033,7 @@
     ],
     [
       411,
-      160,
+      158,
       0,
       147,
       0,
@@ -2992,7 +2065,7 @@
     ],
     [
       415,
-      160,
+      158,
       0,
       123,
       0,
@@ -3029,6 +2102,38 @@
       125,
       0,
       "VIDEO"
+    ],
+    [
+      439,
+      105,
+      1,
+      131,
+      16,
+      "LATENT"
+    ],
+    [
+      440,
+      131,
+      1,
+      135,
+      16,
+      "LATENT"
+    ],
+    [
+      452,
+      105,
+      2,
+      131,
+      17,
+      "LATENT"
+    ],
+    [
+      453,
+      131,
+      2,
+      135,
+      17,
+      "LATENT"
     ]
   ],
   "groups": [],
@@ -3273,6 +2378,32 @@
               694,
               4804
             ]
+          },
+          {
+            "id": "375d8c0c-9086-4ec9-b21c-7400f9583225",
+            "name": "BASE_CONTEXT_LATENT",
+            "type": "LATENT",
+            "linkIds": [
+              420
+            ],
+            "localized_name": "BASE_CONTEXT_LATENT",
+            "pos": [
+              694,
+              4864
+            ]
+          },
+          {
+            "id": "97e513d0-0a6c-4c54-a03e-d78299987d4b",
+            "name": "REFINED_CONTEXT_LATENT",
+            "type": "LATENT",
+            "linkIds": [
+              441
+            ],
+            "localized_name": "REFINED_CONTEXT_LATENT",
+            "pos": [
+              694,
+              4960
+            ]
           }
         ],
         "widgets": [],
@@ -3412,7 +2543,7 @@
                 "name": "AUDIO",
                 "type": "AUDIO",
                 "links": [
-                  166
+                  422
                 ]
               }
             ],
@@ -3457,7 +2588,7 @@
                 "name": "IMAGE",
                 "type": "IMAGE",
                 "links": [
-                  167
+                  421
                 ]
               }
             ],
@@ -3517,7 +2648,9 @@
                 "localized_name": "Latent",
                 "name": "output",
                 "type": "LATENT",
-                "links": []
+                "links": [
+                  420
+                ]
               },
               {
                 "localized_name": "降噪Latent",
@@ -3909,7 +3042,7 @@
                 "localized_name": "浮点",
                 "name": "FLOAT",
                 "type": "FLOAT",
-                "links": null
+                "links": []
               },
               {
                 "localized_name": "整数",
@@ -3923,7 +3056,7 @@
                 "localized_name": "布尔值",
                 "name": "BOOL",
                 "type": "BOOLEAN",
-                "links": null
+                "links": []
               }
             ],
             "properties": {
@@ -4451,7 +3584,7 @@
                 "widget": {
                   "name": "steps"
                 },
-                "link": 235
+                "link": null
               },
               {
                 "localized_name": "降噪",
@@ -4535,7 +3668,8 @@
                 "type": "LATENT",
                 "links": [
                   254,
-                  255
+                  255,
+                  441
                 ]
               },
               {
@@ -4549,6 +3683,69 @@
               "Node name for S&R": "SamplerCustomAdvanced"
             },
             "widgets_values": []
+          },
+          {
+            "id": 200,
+            "type": "MiniMaxH3MotionContextTrim",
+            "pos": [
+              1500,
+              5050
+            ],
+            "size": [
+              300,
+              150
+            ],
+            "flags": {},
+            "order": 31,
+            "mode": 0,
+            "inputs": [
+              {
+                "name": "images",
+                "type": "IMAGE",
+                "link": 421
+              },
+              {
+                "name": "audio",
+                "shape": 7,
+                "type": "AUDIO",
+                "link": 422
+              },
+              {
+                "name": "trim_frames",
+                "type": "INT",
+                "widget": {
+                  "name": "trim_frames"
+                },
+                "link": null
+              }
+            ],
+            "outputs": [
+              {
+                "name": "images",
+                "type": "IMAGE",
+                "links": [
+                  167
+                ]
+              },
+              {
+                "name": "audio",
+                "type": "AUDIO",
+                "links": [
+                  166
+                ]
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "MiniMaxH3MotionContextTrim"
+            },
+            "widgets_values": [
+              0,
+              24,
+              true
+            ],
+            "title": "Trim Pinned Head + Match Audio Tail",
+            "color": "#1f1f48",
+            "bgcolor": "rgba(24,24,27,.9)"
           }
         ],
         "groups": [
@@ -4680,7 +3877,7 @@
           },
           {
             "id": 167,
-            "origin_id": 10,
+            "origin_id": 200,
             "origin_slot": 0,
             "target_id": 91,
             "target_slot": 0,
@@ -4688,8 +3885,8 @@
           },
           {
             "id": 166,
-            "origin_id": 23,
-            "origin_slot": 0,
+            "origin_id": 200,
+            "origin_slot": 1,
             "target_id": 91,
             "target_slot": 1,
             "type": "AUDIO"
@@ -4997,9 +4194,43 @@
             "target_id": 23,
             "target_slot": 0,
             "type": "LATENT"
+          },
+          {
+            "id": 420,
+            "origin_id": 14,
+            "origin_slot": 0,
+            "target_id": -20,
+            "target_slot": 1,
+            "type": "LATENT"
+          },
+          {
+            "id": 421,
+            "origin_id": 10,
+            "origin_slot": 0,
+            "target_id": 200,
+            "target_slot": 0,
+            "type": "IMAGE"
+          },
+          {
+            "id": 422,
+            "origin_id": 23,
+            "origin_slot": 0,
+            "target_id": 200,
+            "target_slot": 1,
+            "type": "AUDIO"
+          },
+          {
+            "id": 441,
+            "origin_id": 130,
+            "origin_slot": 0,
+            "target_id": -20,
+            "target_slot": 2,
+            "type": "LATENT"
           }
         ],
-        "extra": {}
+        "extra": {},
+        "lastNodeId": 200,
+        "lastLinkId": 441
       },
       {
         "id": "435db874-35cd-4f9f-a939-74d990d574bf",
@@ -5228,6 +4459,30 @@
               -2453.435546875,
               5044
             ]
+          },
+          {
+            "id": "b358f8d5-db3c-438c-a744-fadd8d1e872e",
+            "name": "context_latent",
+            "type": "LATENT",
+            "linkIds": [
+              424
+            ],
+            "pos": [
+              -2453.435546875,
+              5064
+            ]
+          },
+          {
+            "id": "1788aabe-c572-4e2d-a9ec-f7ca8faa77c9",
+            "name": "refined_context_latent",
+            "type": "LATENT",
+            "linkIds": [
+              445
+            ],
+            "pos": [
+              -2453.0,
+              5120
+            ]
           }
         ],
         "outputs": [
@@ -5242,6 +4497,32 @@
             "pos": [
               694,
               4804
+            ]
+          },
+          {
+            "id": "583682cf-f8ef-497a-8206-0d870756c777",
+            "name": "BASE_CONTEXT_LATENT",
+            "type": "LATENT",
+            "linkIds": [
+              423
+            ],
+            "localized_name": "BASE_CONTEXT_LATENT",
+            "pos": [
+              694,
+              4864
+            ]
+          },
+          {
+            "id": "7b5907ec-05f1-4c6e-9e4d-5be2857c29d9",
+            "name": "REFINED_CONTEXT_LATENT",
+            "type": "LATENT",
+            "linkIds": [
+              442
+            ],
+            "localized_name": "REFINED_CONTEXT_LATENT",
+            "pos": [
+              694,
+              4960
             ]
           }
         ],
@@ -5280,7 +4561,9 @@
                 "links": [
                   257,
                   267,
-                  353
+                  353,
+                  425,
+                  443
                 ]
               }
             ],
@@ -5383,7 +4666,7 @@
                 "name": "AUDIO",
                 "type": "AUDIO",
                 "links": [
-                  265
+                  429
                 ]
               }
             ],
@@ -5428,7 +4711,7 @@
                 "name": "IMAGE",
                 "type": "IMAGE",
                 "links": [
-                  264
+                  428
                 ]
               }
             ],
@@ -5488,7 +4771,9 @@
                 "localized_name": "Latent",
                 "name": "output",
                 "type": "LATENT",
-                "links": []
+                "links": [
+                  423
+                ]
               },
               {
                 "localized_name": "降噪Latent",
@@ -5529,7 +4814,7 @@
                 "localized_name": "条件",
                 "name": "conditioning",
                 "type": "CONDITIONING",
-                "link": 263
+                "link": 427
               }
             ],
             "outputs": [
@@ -5819,7 +5104,8 @@
                 "name": "LATENT",
                 "type": "LATENT",
                 "links": [
-                  262
+                  262,
+                  426
                 ]
               }
             ],
@@ -5827,7 +5113,7 @@
               "Node name for S&R": "MiniMaxH3ImageToVideo"
             },
             "widgets_values": [
-              "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn Japanese fantasy animation; the young adult woman, tiny forest spirit, countryside kitchen, and composition shown in <Picture 1> are preserved exactly, including her cream blouse, moss-green overalls, red ribbon, the spirit’s leaf-shaped ears, the red apple, wicker basket, wooden table, open window, golden daylight, watercolor background, pencil linework, camera height, and spatial relationships. The opening frame continues the previous segment without a reset. The camera continues trucking right with small amplitude at slow speed. From 0.00 to 1.20 seconds, her reaching hand and the spirit’s curious head tilt continue seamlessly. From 1.20 to 4.20 seconds, the spirit pushes the apple into her palm, hops onto the table, and shakes a trail of tiny glowing seeds from its leaf-shaped ears; she watches in delighted surprise as two sprouts emerge from a clay pot. From 4.20 to 5.17 seconds, she lifts the pot slightly while the spirit balances beside it, ending with the sprouts unfurling toward the window in a stable pose for the next segment. Preserve the exact character designs, clothing, props, lighting, watercolor texture, and gentle cel animation. Avoid violence, horror, and photorealism, identity change, camera jump, scene change, morphing, duplicate limbs, cuts, text, logos, or watermarks.\n\noverall_soundscape: The same cicadas, birdsong, and leaf-filled breeze continue at matching levels. The apple taps softly into her palm, tiny paws patter on wood, seeds tinkle like faint glass bells, and new leaves unfurl with a delicate papery rustle.\n\nnon_diegetic_music: The same celesta, pizzicato strings, and wooden flute waltz continues seamlessly, adding a brief rising flute phrase as the sprouts appear.",
+              "integrated_multimodal_description: [Shot 1] 2D hand-drawn Japanese fantasy animation in one uninterrupted eye-level medium-wide shot inside the same sunlit countryside kitchen. The exact young adult woman, tiny round leaf-eared forest spirit, red apple, wicker basket, old wooden table, open window, golden daylight, watercolor background, pencil linework, camera height, and spatial relationships continue from the preceding clip. From 0.00 to 2.00 seconds, preserve the preceding clip's exact closing framing while her reaching hand continues its existing motion, the spirit maintains its curious head tilt with a small breath and weight shift, and the camera continues the same slow small-amplitude truck right; do not reset poses or introduce any new object. From 2.00 to 4.90 seconds, the spirit finishes rolling the same red apple into her palm, climbs onto the table beside her hand, and watches as she gently places the apple on the tabletop. From 4.90 to 5.88 seconds, she and the spirit settle beside the apple in a stable shared eyeline that can continue into the next clip. Preserve exact identities, clothing, proportions, lighting, watercolor texture, hand and paw anatomy, and continuous camera velocity. No cut, scene change, camera jump, pose reset, new plant, pot, flower, vine, glow, duplicate limb, morphing, text, logo, or watermark.\n\noverall_soundscape: The same summer cicadas, birdsong, leaf-filled breeze, and quiet kitchen room tone continue at matching levels. The apple rolls and taps softly on wood, fabric rustles, tiny paws patter on the tabletop, and the spirit gives one restrained chirp.\n\nnon_diegetic_music: The same celesta, pizzicato strings, and wooden-flute waltz continues at the same tempo and level without restarting, with one short flute phrase near the end.",
               736,
               416,
               124
@@ -5880,7 +5166,7 @@
                 "localized_name": "浮点",
                 "name": "FLOAT",
                 "type": "FLOAT",
-                "links": null
+                "links": []
               },
               {
                 "localized_name": "整数",
@@ -5895,7 +5181,7 @@
                 "localized_name": "布尔值",
                 "name": "BOOL",
                 "type": "BOOLEAN",
-                "links": null
+                "links": []
               }
             ],
             "properties": {
@@ -5945,7 +5231,7 @@
               "Node name for S&R": "PrimitiveFloat"
             },
             "widgets_values": [
-              5
+              5.875
             ]
           },
           {
@@ -6323,7 +5609,8 @@
                 "name": "latent",
                 "type": "LATENT",
                 "links": [
-                  301
+                  301,
+                  444
                 ]
               },
               {
@@ -6368,7 +5655,7 @@
                 "localized_name": "条件",
                 "name": "conditioning",
                 "type": "CONDITIONING",
-                "link": 295
+                "link": 446
               }
             ],
             "outputs": [
@@ -6423,7 +5710,7 @@
                 "widget": {
                   "name": "steps"
                 },
-                "link": 289
+                "link": null
               },
               {
                 "localized_name": "降噪",
@@ -6507,7 +5794,8 @@
                 "type": "LATENT",
                 "links": [
                   302,
-                  303
+                  303,
+                  442
                 ]
               },
               {
@@ -6620,12 +5908,237 @@
               "Node name for S&R": "MiniMaxH3ImageToVideo"
             },
             "widgets_values": [
-              "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn Japanese fantasy animation; the young adult woman, tiny forest spirit, countryside kitchen, and composition shown in <Picture 1> are preserved exactly, including her cream blouse, moss-green overalls, red ribbon, the spirit’s leaf-shaped ears, the red apple, wicker basket, wooden table, open window, golden daylight, watercolor background, pencil linework, camera height, and spatial relationships. The opening frame continues the previous segment without a reset. The camera continues trucking right with small amplitude at slow speed. From 0.00 to 1.20 seconds, her reaching hand and the spirit’s curious head tilt continue seamlessly. From 1.20 to 4.20 seconds, the spirit pushes the apple into her palm, hops onto the table, and shakes a trail of tiny glowing seeds from its leaf-shaped ears; she watches in delighted surprise as two sprouts emerge from a clay pot. From 4.20 to 5.17 seconds, she lifts the pot slightly while the spirit balances beside it, ending with the sprouts unfurling toward the window in a stable pose for the next segment. Preserve the exact character designs, clothing, props, lighting, watercolor texture, and gentle cel animation. Avoid violence, horror, and photorealism, identity change, camera jump, scene change, morphing, duplicate limbs, cuts, text, logos, or watermarks.\n\noverall_soundscape: The same cicadas, birdsong, and leaf-filled breeze continue at matching levels. The apple taps softly into her palm, tiny paws patter on wood, seeds tinkle like faint glass bells, and new leaves unfurl with a delicate papery rustle.\n\nnon_diegetic_music: The same celesta, pizzicato strings, and wooden flute waltz continues seamlessly, adding a brief rising flute phrase as the sprouts appear.",
+              "integrated_multimodal_description: [Shot 1] 2D hand-drawn Japanese fantasy animation in one uninterrupted eye-level medium-wide shot inside the same sunlit countryside kitchen. The exact young adult woman, tiny round leaf-eared forest spirit, red apple, wicker basket, old wooden table, open window, golden daylight, watercolor background, pencil linework, camera height, and spatial relationships continue from the preceding clip. From 0.00 to 2.00 seconds, preserve the preceding clip's exact closing framing while her reaching hand continues its existing motion, the spirit maintains its curious head tilt with a small breath and weight shift, and the camera continues the same slow small-amplitude truck right; do not reset poses or introduce any new object. From 2.00 to 4.90 seconds, the spirit finishes rolling the same red apple into her palm, climbs onto the table beside her hand, and watches as she gently places the apple on the tabletop. From 4.90 to 5.88 seconds, she and the spirit settle beside the apple in a stable shared eyeline that can continue into the next clip. Preserve exact identities, clothing, proportions, lighting, watercolor texture, hand and paw anatomy, and continuous camera velocity. No cut, scene change, camera jump, pose reset, new plant, pot, flower, vine, glow, duplicate limb, morphing, text, logo, or watermark.\n\noverall_soundscape: The same summer cicadas, birdsong, leaf-filled breeze, and quiet kitchen room tone continue at matching levels. The apple rolls and taps softly on wood, fabric rustles, tiny paws patter on the tabletop, and the spirit gives one restrained chirp.\n\nnon_diegetic_music: The same celesta, pizzicato strings, and wooden-flute waltz continues at the same tempo and level without restarting, with one short flute phrase near the end.",
               736,
               416,
               124
             ],
             "title": "Text-only conditioning for latent refine"
+          },
+          {
+            "id": 200,
+            "type": "MiniMaxH3MotionContext",
+            "pos": [
+              -820,
+              4490
+            ],
+            "size": [
+              310,
+              230
+            ],
+            "flags": {},
+            "order": 30,
+            "mode": 0,
+            "inputs": [
+              {
+                "name": "conditioning",
+                "type": "CONDITIONING",
+                "link": 263
+              },
+              {
+                "name": "vae",
+                "type": "VAE",
+                "link": 425
+              },
+              {
+                "name": "latent",
+                "type": "LATENT",
+                "link": 426
+              },
+              {
+                "name": "context_frames",
+                "shape": 7,
+                "type": "IMAGE",
+                "link": null
+              },
+              {
+                "name": "context_latent",
+                "shape": 7,
+                "type": "LATENT",
+                "link": 424
+              },
+              {
+                "name": "audio_vae",
+                "shape": 7,
+                "type": "VAE",
+                "link": null
+              },
+              {
+                "name": "context_audio",
+                "shape": 7,
+                "type": "AUDIO",
+                "link": null
+              }
+            ],
+            "outputs": [
+              {
+                "name": "conditioning",
+                "type": "CONDITIONING",
+                "links": [
+                  427
+                ]
+              },
+              {
+                "name": "trim_frames",
+                "type": "INT",
+                "links": [
+                  430
+                ]
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "MiniMaxH3MotionContext"
+            },
+            "widgets_values": [
+              "22",
+              24
+            ],
+            "title": "22-frame Motion + 24-frame Audio Context",
+            "color": "#1f1f48",
+            "bgcolor": "rgba(24,24,27,.9)"
+          },
+          {
+            "id": 201,
+            "type": "MiniMaxH3MotionContextTrim",
+            "pos": [
+              1500,
+              5050
+            ],
+            "size": [
+              300,
+              150
+            ],
+            "flags": {},
+            "order": 31,
+            "mode": 0,
+            "inputs": [
+              {
+                "name": "images",
+                "type": "IMAGE",
+                "link": 428
+              },
+              {
+                "name": "audio",
+                "shape": 7,
+                "type": "AUDIO",
+                "link": 429
+              },
+              {
+                "name": "trim_frames",
+                "type": "INT",
+                "widget": {
+                  "name": "trim_frames"
+                },
+                "link": 430
+              }
+            ],
+            "outputs": [
+              {
+                "name": "images",
+                "type": "IMAGE",
+                "links": [
+                  264
+                ]
+              },
+              {
+                "name": "audio",
+                "type": "AUDIO",
+                "links": [
+                  265
+                ]
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "MiniMaxH3MotionContextTrim"
+            },
+            "widgets_values": [
+              0,
+              24,
+              true
+            ],
+            "title": "Trim Pinned Head + Match Audio Tail",
+            "color": "#1f1f48",
+            "bgcolor": "rgba(24,24,27,.9)"
+          },
+          {
+            "id": 202,
+            "type": "MiniMaxH3MotionContext",
+            "pos": [
+              1040,
+              4490
+            ],
+            "size": [
+              330,
+              230
+            ],
+            "flags": {},
+            "order": 31,
+            "mode": 0,
+            "inputs": [
+              {
+                "name": "conditioning",
+                "type": "CONDITIONING",
+                "link": 295
+              },
+              {
+                "name": "vae",
+                "type": "VAE",
+                "link": 443
+              },
+              {
+                "name": "latent",
+                "type": "LATENT",
+                "link": 444
+              },
+              {
+                "name": "context_frames",
+                "shape": 7,
+                "type": "IMAGE",
+                "link": null
+              },
+              {
+                "name": "context_latent",
+                "shape": 7,
+                "type": "LATENT",
+                "link": 445
+              },
+              {
+                "name": "audio_vae",
+                "shape": 7,
+                "type": "VAE",
+                "link": null
+              },
+              {
+                "name": "context_audio",
+                "shape": 7,
+                "type": "AUDIO",
+                "link": null
+              }
+            ],
+            "outputs": [
+              {
+                "name": "conditioning",
+                "type": "CONDITIONING",
+                "links": [
+                  446
+                ]
+              },
+              {
+                "name": "trim_frames",
+                "type": "INT",
+                "links": []
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "MiniMaxH3MotionContext"
+            },
+            "widgets_values": [
+              "22",
+              24
+            ],
+            "title": "0.7MP Refine Motion Context · 22f + 24f Audio",
+            "color": "#48311f",
+            "bgcolor": "rgba(39,25,16,.9)"
           }
         ],
         "groups": [
@@ -6751,13 +6264,13 @@
             "id": 263,
             "origin_id": 104,
             "origin_slot": 0,
-            "target_id": 16,
-            "target_slot": 1,
+            "target_id": 200,
+            "target_slot": 0,
             "type": "CONDITIONING"
           },
           {
             "id": 264,
-            "origin_id": 10,
+            "origin_id": 201,
             "origin_slot": 0,
             "target_id": 91,
             "target_slot": 0,
@@ -6765,8 +6278,8 @@
           },
           {
             "id": 265,
-            "origin_id": 23,
-            "origin_slot": 0,
+            "origin_id": 201,
+            "origin_slot": 1,
             "target_id": 91,
             "target_slot": 1,
             "type": "AUDIO"
@@ -6999,8 +6512,8 @@
             "id": 295,
             "origin_id": 127,
             "origin_slot": 1,
-            "target_id": 128,
-            "target_slot": 1,
+            "target_id": 202,
+            "target_slot": 0,
             "type": "CONDITIONING"
           },
           {
@@ -7122,9 +6635,115 @@
             "target_id": 127,
             "target_slot": 1,
             "type": "CONDITIONING"
+          },
+          {
+            "id": 423,
+            "origin_id": 14,
+            "origin_slot": 0,
+            "target_id": -20,
+            "target_slot": 1,
+            "type": "LATENT"
+          },
+          {
+            "id": 424,
+            "origin_id": -10,
+            "origin_slot": 16,
+            "target_id": 200,
+            "target_slot": 4,
+            "type": "LATENT"
+          },
+          {
+            "id": 425,
+            "origin_id": 11,
+            "origin_slot": 0,
+            "target_id": 200,
+            "target_slot": 1,
+            "type": "VAE"
+          },
+          {
+            "id": 426,
+            "origin_id": 104,
+            "origin_slot": 1,
+            "target_id": 200,
+            "target_slot": 2,
+            "type": "LATENT"
+          },
+          {
+            "id": 427,
+            "origin_id": 200,
+            "origin_slot": 0,
+            "target_id": 16,
+            "target_slot": 1,
+            "type": "CONDITIONING"
+          },
+          {
+            "id": 428,
+            "origin_id": 10,
+            "origin_slot": 0,
+            "target_id": 201,
+            "target_slot": 0,
+            "type": "IMAGE"
+          },
+          {
+            "id": 429,
+            "origin_id": 23,
+            "origin_slot": 0,
+            "target_id": 201,
+            "target_slot": 1,
+            "type": "AUDIO"
+          },
+          {
+            "id": 430,
+            "origin_id": 200,
+            "origin_slot": 1,
+            "target_id": 201,
+            "target_slot": 2,
+            "type": "INT"
+          },
+          {
+            "id": 442,
+            "origin_id": 130,
+            "origin_slot": 0,
+            "target_id": -20,
+            "target_slot": 2,
+            "type": "LATENT"
+          },
+          {
+            "id": 443,
+            "origin_id": 11,
+            "origin_slot": 0,
+            "target_id": 202,
+            "target_slot": 1,
+            "type": "VAE"
+          },
+          {
+            "id": 444,
+            "origin_id": 127,
+            "origin_slot": 0,
+            "target_id": 202,
+            "target_slot": 2,
+            "type": "LATENT"
+          },
+          {
+            "id": 445,
+            "origin_id": -10,
+            "origin_slot": 17,
+            "target_id": 202,
+            "target_slot": 4,
+            "type": "LATENT"
+          },
+          {
+            "id": 446,
+            "origin_id": 202,
+            "origin_slot": 0,
+            "target_id": 128,
+            "target_slot": 1,
+            "type": "CONDITIONING"
           }
         ],
-        "extra": {}
+        "extra": {},
+        "lastNodeId": 202,
+        "lastLinkId": 446
       },
       {
         "id": "f2bc81c4-0088-4514-a723-3c69509caf64",
@@ -7353,6 +6972,30 @@
               -2453.435546875,
               5044
             ]
+          },
+          {
+            "id": "ec6e8775-d94f-4ffe-9af3-47d7e149089b",
+            "name": "context_latent",
+            "type": "LATENT",
+            "linkIds": [
+              432
+            ],
+            "pos": [
+              -2453.435546875,
+              5064
+            ]
+          },
+          {
+            "id": "9964c110-fe30-42f9-b938-f6c3ad1b955c",
+            "name": "refined_context_latent",
+            "type": "LATENT",
+            "linkIds": [
+              450
+            ],
+            "pos": [
+              -2453.0,
+              5120
+            ]
           }
         ],
         "outputs": [
@@ -7367,6 +7010,32 @@
             "pos": [
               694,
               4804
+            ]
+          },
+          {
+            "id": "63aaf0dc-dbb3-4f5a-8dee-090c936dfbba",
+            "name": "BASE_CONTEXT_LATENT",
+            "type": "LATENT",
+            "linkIds": [
+              431
+            ],
+            "localized_name": "BASE_CONTEXT_LATENT",
+            "pos": [
+              694,
+              4864
+            ]
+          },
+          {
+            "id": "db21c04f-480d-4881-8192-1411820e09fa",
+            "name": "REFINED_CONTEXT_LATENT",
+            "type": "LATENT",
+            "linkIds": [
+              447
+            ],
+            "localized_name": "REFINED_CONTEXT_LATENT",
+            "pos": [
+              694,
+              4960
             ]
           }
         ],
@@ -7405,7 +7074,9 @@
                 "links": [
                   305,
                   315,
-                  360
+                  360,
+                  433,
+                  448
                 ]
               }
             ],
@@ -7508,7 +7179,7 @@
                 "name": "AUDIO",
                 "type": "AUDIO",
                 "links": [
-                  313
+                  437
                 ]
               }
             ],
@@ -7553,7 +7224,7 @@
                 "name": "IMAGE",
                 "type": "IMAGE",
                 "links": [
-                  312
+                  436
                 ]
               }
             ],
@@ -7613,7 +7284,9 @@
                 "localized_name": "Latent",
                 "name": "output",
                 "type": "LATENT",
-                "links": []
+                "links": [
+                  431
+                ]
               },
               {
                 "localized_name": "降噪Latent",
@@ -7654,7 +7327,7 @@
                 "localized_name": "条件",
                 "name": "conditioning",
                 "type": "CONDITIONING",
-                "link": 311
+                "link": 435
               }
             ],
             "outputs": [
@@ -7944,7 +7617,8 @@
                 "name": "LATENT",
                 "type": "LATENT",
                 "links": [
-                  310
+                  310,
+                  434
                 ]
               }
             ],
@@ -7952,7 +7626,7 @@
               "Node name for S&R": "MiniMaxH3ImageToVideo"
             },
             "widgets_values": [
-              "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn Japanese fantasy animation; every visual anchor in <Picture 1> is preserved exactly: the young adult woman’s face, short dark hair, cream blouse, moss-green overalls and red ribbon; the tiny leaf-eared forest spirit; the red apple, wicker basket, wooden table, clay pot, fresh sprouts, open window, golden daylight, watercolor background, pencil linework, camera height, and spatial relationships. The opening frame is a direct continuation with no reset, and the camera completes the same slow small-amplitude truck right. From 0.00 to 1.20 seconds, she steadies the clay pot while the spirit remains balanced beside the sprouts. From 1.20 to 3.80 seconds, the sprouts grow into a curling vine dotted with small white flowers, gently circling the window frame as she laughs silently and the spirit claps its paws. From 3.80 to 4.60 seconds, a blue butterfly enters through the window and lands on the spirit’s leaf-shaped ear. From 4.60 to 5.17 seconds, everyone becomes still in a peaceful final tableau as warm light brightens the kitchen. Preserve stable character designs, coherent hands and paws, restrained natural motion, watercolor textures, and continuous lighting. Avoid violence, horror, and photorealism, identity change, camera jump, scene change, morphing, duplicate limbs, cuts, text, logos, or watermarks.\n\noverall_soundscape: Cicadas, birdsong, and the soft breeze remain continuous. Growing vines produce a faint leafy rustle, the spirit gives two quiet chirps, butterfly wings flutter close by, and the room settles into calm summer ambience.\n\nnon_diegetic_music: The celesta and pizzicato-string waltz gently expands with warm wooden-flute harmony, then resolves on one sustained celesta note.",
+              "integrated_multimodal_description: [Shot 1] 2D hand-drawn Japanese fantasy animation in the same uninterrupted eye-level medium-wide kitchen shot. The exact woman, leaf-eared forest spirit, red apple, wicker basket, wooden table, open window, golden daylight, watercolor background, pencil linework, camera height, and spatial relationships continue from the preceding clip. From 0.00 to 2.00 seconds, hold the preceding clip's exact closing composition while the woman's breathing, the spirit's balance beside the apple, their shared eyeline, and the slow small-amplitude truck right continue naturally; do not reset the pose or add any object. From 2.00 to 5.40 seconds, the spirit taps the same apple twice with one paw, the woman quietly laughs with closed lips, and she slides the wicker basket closer so the spirit can step back into it. From 5.40 to 6.58 seconds, the spirit settles inside the basket with its leaf-shaped ears still visible while the woman rests one hand beside the apple and both look toward the open window, ending in a peaceful stable tableau. Preserve exact identities, clothing, proportions, props, lighting, watercolor texture, coherent hands and paws, and continuous camera velocity. No cut, scene change, camera jump, pose reset, new plant, pot, flower, vine, butterfly, glow, duplicate limb, morphing, text, logo, or watermark.\n\noverall_soundscape: Cicadas, birdsong, the soft breeze, and the same kitchen room tone remain continuous at matching levels. Two quiet apple taps, a small wicker creak, fabric movement, and a soft settling rustle are heard without an ambience restart.\n\nnon_diegetic_music: The existing celesta and pizzicato-string waltz continues at the same tempo, joined by a restrained wooden-flute cadence and one sustained final celesta note.",
               736,
               416,
               124
@@ -8005,7 +7679,7 @@
                 "localized_name": "浮点",
                 "name": "FLOAT",
                 "type": "FLOAT",
-                "links": null
+                "links": []
               },
               {
                 "localized_name": "整数",
@@ -8020,7 +7694,7 @@
                 "localized_name": "布尔值",
                 "name": "BOOL",
                 "type": "BOOLEAN",
-                "links": null
+                "links": []
               }
             ],
             "properties": {
@@ -8070,7 +7744,7 @@
               "Node name for S&R": "PrimitiveFloat"
             },
             "widgets_values": [
-              5
+              6.5833333333
             ]
           },
           {
@@ -8448,7 +8122,8 @@
                 "name": "latent",
                 "type": "LATENT",
                 "links": [
-                  349
+                  349,
+                  449
                 ]
               },
               {
@@ -8493,7 +8168,7 @@
                 "localized_name": "条件",
                 "name": "conditioning",
                 "type": "CONDITIONING",
-                "link": 343
+                "link": 451
               }
             ],
             "outputs": [
@@ -8548,7 +8223,7 @@
                 "widget": {
                   "name": "steps"
                 },
-                "link": 337
+                "link": null
               },
               {
                 "localized_name": "降噪",
@@ -8632,7 +8307,8 @@
                 "type": "LATENT",
                 "links": [
                   350,
-                  351
+                  351,
+                  447
                 ]
               },
               {
@@ -8745,12 +8421,237 @@
               "Node name for S&R": "MiniMaxH3ImageToVideo"
             },
             "widgets_values": [
-              "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.\n\nintegrated_multimodal_description: [Shot 1] 2D hand-drawn Japanese fantasy animation; every visual anchor in <Picture 1> is preserved exactly: the young adult woman’s face, short dark hair, cream blouse, moss-green overalls and red ribbon; the tiny leaf-eared forest spirit; the red apple, wicker basket, wooden table, clay pot, fresh sprouts, open window, golden daylight, watercolor background, pencil linework, camera height, and spatial relationships. The opening frame is a direct continuation with no reset, and the camera completes the same slow small-amplitude truck right. From 0.00 to 1.20 seconds, she steadies the clay pot while the spirit remains balanced beside the sprouts. From 1.20 to 3.80 seconds, the sprouts grow into a curling vine dotted with small white flowers, gently circling the window frame as she laughs silently and the spirit claps its paws. From 3.80 to 4.60 seconds, a blue butterfly enters through the window and lands on the spirit’s leaf-shaped ear. From 4.60 to 5.17 seconds, everyone becomes still in a peaceful final tableau as warm light brightens the kitchen. Preserve stable character designs, coherent hands and paws, restrained natural motion, watercolor textures, and continuous lighting. Avoid violence, horror, and photorealism, identity change, camera jump, scene change, morphing, duplicate limbs, cuts, text, logos, or watermarks.\n\noverall_soundscape: Cicadas, birdsong, and the soft breeze remain continuous. Growing vines produce a faint leafy rustle, the spirit gives two quiet chirps, butterfly wings flutter close by, and the room settles into calm summer ambience.\n\nnon_diegetic_music: The celesta and pizzicato-string waltz gently expands with warm wooden-flute harmony, then resolves on one sustained celesta note.",
+              "integrated_multimodal_description: [Shot 1] 2D hand-drawn Japanese fantasy animation in the same uninterrupted eye-level medium-wide kitchen shot. The exact woman, leaf-eared forest spirit, red apple, wicker basket, wooden table, open window, golden daylight, watercolor background, pencil linework, camera height, and spatial relationships continue from the preceding clip. From 0.00 to 2.00 seconds, hold the preceding clip's exact closing composition while the woman's breathing, the spirit's balance beside the apple, their shared eyeline, and the slow small-amplitude truck right continue naturally; do not reset the pose or add any object. From 2.00 to 5.40 seconds, the spirit taps the same apple twice with one paw, the woman quietly laughs with closed lips, and she slides the wicker basket closer so the spirit can step back into it. From 5.40 to 6.58 seconds, the spirit settles inside the basket with its leaf-shaped ears still visible while the woman rests one hand beside the apple and both look toward the open window, ending in a peaceful stable tableau. Preserve exact identities, clothing, proportions, props, lighting, watercolor texture, coherent hands and paws, and continuous camera velocity. No cut, scene change, camera jump, pose reset, new plant, pot, flower, vine, butterfly, glow, duplicate limb, morphing, text, logo, or watermark.\n\noverall_soundscape: Cicadas, birdsong, the soft breeze, and the same kitchen room tone remain continuous at matching levels. Two quiet apple taps, a small wicker creak, fabric movement, and a soft settling rustle are heard without an ambience restart.\n\nnon_diegetic_music: The existing celesta and pizzicato-string waltz continues at the same tempo, joined by a restrained wooden-flute cadence and one sustained final celesta note.",
               736,
               416,
               124
             ],
             "title": "Text-only conditioning for latent refine"
+          },
+          {
+            "id": 200,
+            "type": "MiniMaxH3MotionContext",
+            "pos": [
+              -820,
+              4490
+            ],
+            "size": [
+              310,
+              230
+            ],
+            "flags": {},
+            "order": 30,
+            "mode": 0,
+            "inputs": [
+              {
+                "name": "conditioning",
+                "type": "CONDITIONING",
+                "link": 311
+              },
+              {
+                "name": "vae",
+                "type": "VAE",
+                "link": 433
+              },
+              {
+                "name": "latent",
+                "type": "LATENT",
+                "link": 434
+              },
+              {
+                "name": "context_frames",
+                "shape": 7,
+                "type": "IMAGE",
+                "link": null
+              },
+              {
+                "name": "context_latent",
+                "shape": 7,
+                "type": "LATENT",
+                "link": 432
+              },
+              {
+                "name": "audio_vae",
+                "shape": 7,
+                "type": "VAE",
+                "link": null
+              },
+              {
+                "name": "context_audio",
+                "shape": 7,
+                "type": "AUDIO",
+                "link": null
+              }
+            ],
+            "outputs": [
+              {
+                "name": "conditioning",
+                "type": "CONDITIONING",
+                "links": [
+                  435
+                ]
+              },
+              {
+                "name": "trim_frames",
+                "type": "INT",
+                "links": [
+                  438
+                ]
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "MiniMaxH3MotionContext"
+            },
+            "widgets_values": [
+              "22",
+              24
+            ],
+            "title": "22-frame Motion + 24-frame Audio Context",
+            "color": "#1f1f48",
+            "bgcolor": "rgba(24,24,27,.9)"
+          },
+          {
+            "id": 201,
+            "type": "MiniMaxH3MotionContextTrim",
+            "pos": [
+              1500,
+              5050
+            ],
+            "size": [
+              300,
+              150
+            ],
+            "flags": {},
+            "order": 31,
+            "mode": 0,
+            "inputs": [
+              {
+                "name": "images",
+                "type": "IMAGE",
+                "link": 436
+              },
+              {
+                "name": "audio",
+                "shape": 7,
+                "type": "AUDIO",
+                "link": 437
+              },
+              {
+                "name": "trim_frames",
+                "type": "INT",
+                "widget": {
+                  "name": "trim_frames"
+                },
+                "link": 438
+              }
+            ],
+            "outputs": [
+              {
+                "name": "images",
+                "type": "IMAGE",
+                "links": [
+                  312
+                ]
+              },
+              {
+                "name": "audio",
+                "type": "AUDIO",
+                "links": [
+                  313
+                ]
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "MiniMaxH3MotionContextTrim"
+            },
+            "widgets_values": [
+              0,
+              24,
+              true
+            ],
+            "title": "Trim Pinned Head + Match Audio Tail",
+            "color": "#1f1f48",
+            "bgcolor": "rgba(24,24,27,.9)"
+          },
+          {
+            "id": 202,
+            "type": "MiniMaxH3MotionContext",
+            "pos": [
+              1040,
+              4490
+            ],
+            "size": [
+              330,
+              230
+            ],
+            "flags": {},
+            "order": 31,
+            "mode": 0,
+            "inputs": [
+              {
+                "name": "conditioning",
+                "type": "CONDITIONING",
+                "link": 343
+              },
+              {
+                "name": "vae",
+                "type": "VAE",
+                "link": 448
+              },
+              {
+                "name": "latent",
+                "type": "LATENT",
+                "link": 449
+              },
+              {
+                "name": "context_frames",
+                "shape": 7,
+                "type": "IMAGE",
+                "link": null
+              },
+              {
+                "name": "context_latent",
+                "shape": 7,
+                "type": "LATENT",
+                "link": 450
+              },
+              {
+                "name": "audio_vae",
+                "shape": 7,
+                "type": "VAE",
+                "link": null
+              },
+              {
+                "name": "context_audio",
+                "shape": 7,
+                "type": "AUDIO",
+                "link": null
+              }
+            ],
+            "outputs": [
+              {
+                "name": "conditioning",
+                "type": "CONDITIONING",
+                "links": [
+                  451
+                ]
+              },
+              {
+                "name": "trim_frames",
+                "type": "INT",
+                "links": []
+              }
+            ],
+            "properties": {
+              "Node name for S&R": "MiniMaxH3MotionContext"
+            },
+            "widgets_values": [
+              "22",
+              24
+            ],
+            "title": "0.7MP Refine Motion Context · 22f + 24f Audio",
+            "color": "#48311f",
+            "bgcolor": "rgba(39,25,16,.9)"
           }
         ],
         "groups": [
@@ -8876,13 +8777,13 @@
             "id": 311,
             "origin_id": 104,
             "origin_slot": 0,
-            "target_id": 16,
-            "target_slot": 1,
+            "target_id": 200,
+            "target_slot": 0,
             "type": "CONDITIONING"
           },
           {
             "id": 312,
-            "origin_id": 10,
+            "origin_id": 201,
             "origin_slot": 0,
             "target_id": 91,
             "target_slot": 0,
@@ -8890,8 +8791,8 @@
           },
           {
             "id": 313,
-            "origin_id": 23,
-            "origin_slot": 0,
+            "origin_id": 201,
+            "origin_slot": 1,
             "target_id": 91,
             "target_slot": 1,
             "type": "AUDIO"
@@ -9124,8 +9025,8 @@
             "id": 343,
             "origin_id": 127,
             "origin_slot": 1,
-            "target_id": 128,
-            "target_slot": 1,
+            "target_id": 202,
+            "target_slot": 0,
             "type": "CONDITIONING"
           },
           {
@@ -9247,9 +9148,115 @@
             "target_id": 127,
             "target_slot": 1,
             "type": "CONDITIONING"
+          },
+          {
+            "id": 431,
+            "origin_id": 14,
+            "origin_slot": 0,
+            "target_id": -20,
+            "target_slot": 1,
+            "type": "LATENT"
+          },
+          {
+            "id": 432,
+            "origin_id": -10,
+            "origin_slot": 16,
+            "target_id": 200,
+            "target_slot": 4,
+            "type": "LATENT"
+          },
+          {
+            "id": 433,
+            "origin_id": 11,
+            "origin_slot": 0,
+            "target_id": 200,
+            "target_slot": 1,
+            "type": "VAE"
+          },
+          {
+            "id": 434,
+            "origin_id": 104,
+            "origin_slot": 1,
+            "target_id": 200,
+            "target_slot": 2,
+            "type": "LATENT"
+          },
+          {
+            "id": 435,
+            "origin_id": 200,
+            "origin_slot": 0,
+            "target_id": 16,
+            "target_slot": 1,
+            "type": "CONDITIONING"
+          },
+          {
+            "id": 436,
+            "origin_id": 10,
+            "origin_slot": 0,
+            "target_id": 201,
+            "target_slot": 0,
+            "type": "IMAGE"
+          },
+          {
+            "id": 437,
+            "origin_id": 23,
+            "origin_slot": 0,
+            "target_id": 201,
+            "target_slot": 1,
+            "type": "AUDIO"
+          },
+          {
+            "id": 438,
+            "origin_id": 200,
+            "origin_slot": 1,
+            "target_id": 201,
+            "target_slot": 2,
+            "type": "INT"
+          },
+          {
+            "id": 447,
+            "origin_id": 130,
+            "origin_slot": 0,
+            "target_id": -20,
+            "target_slot": 2,
+            "type": "LATENT"
+          },
+          {
+            "id": 448,
+            "origin_id": 11,
+            "origin_slot": 0,
+            "target_id": 202,
+            "target_slot": 1,
+            "type": "VAE"
+          },
+          {
+            "id": 449,
+            "origin_id": 127,
+            "origin_slot": 0,
+            "target_id": 202,
+            "target_slot": 2,
+            "type": "LATENT"
+          },
+          {
+            "id": 450,
+            "origin_id": -10,
+            "origin_slot": 17,
+            "target_id": 202,
+            "target_slot": 4,
+            "type": "LATENT"
+          },
+          {
+            "id": 451,
+            "origin_id": 202,
+            "origin_slot": 0,
+            "target_id": 128,
+            "target_slot": 1,
+            "type": "CONDITIONING"
           }
         ],
-        "extra": {}
+        "extra": {},
+        "lastNodeId": 202,
+        "lastLinkId": 451
       }
     ]
   },
@@ -9271,5 +9278,6 @@
       "name": "MiniMax H3 · 3×5s Continuous Chain · Latent 0.7MP · RTX VSR · 12GB"
     }
   },
-  "version": 0.4
+  "version": 0.4,
+  "name": "MiniMax H3 · 3-Segment Dual Motion Context 22f · 0.7MP · RTX VSR · 12GB"
 }

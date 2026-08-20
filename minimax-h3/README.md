@@ -1,12 +1,28 @@
 # MiniMax H3 ComfyUI Workflows
 
-面向约 12GB 显存显卡的 MiniMax H3 文生视频工作流，支持原生音频、H3 latent 精修、RIFE 边界补帧和 RTX Video Super Resolution 输出。
+面向约 12GB 显存显卡的 MiniMax H3 文生视频工作流，支持原生音频、跨段 Motion Context 和 RTX Video Super Resolution 输出。
 
 仓库内置日式手绘奇幻动画提示词：水彩背景、铅笔线条、柔和赛璐璐上色、自然环境与森林精灵。
 
 > 连续生成的生产建议与后续架构见 [`CONTINUITY_DESIGN.md`](./CONTINUITY_DESIGN.md)。核心原则是：先解决身份、构图和运动状态，再让 RIFE 修复轻微运动间隙；语义跳变应局部重生成，而不是强行插帧。
 
 ## 工作流
+
+### 推荐：3 × 5 秒双层 Motion Context 0.7MP 连续生成
+
+[`Minimax_H3_3x5s_Continuous_MotionContext22_RefineContext0.7MP_RTXVSR_1080p_12GB.json`](./Minimax_H3_3x5s_Continuous_MotionContext22_RefineContext0.7MP_RTXVSR_1080p_12GB.json)
+
+- Segment 1 生成的 0.3MP AV latent 直接作为 Segment 2 的运动上下文，Segment 2 同样传给 Segment 3。
+- 每段放大至约 0.7MP，并以 6 steps、denoise 0.30 精修；S2、S3 在精修阶段再次注入上一段 0.7MP 精修 latent 的 22 帧尾部。
+- 两层上下文都携带 22 帧画面和 24 帧音频，解码后只同步裁掉一次固定上下文头。
+- 三段以 Direct 模式拼接，不使用 RIFE 生成语义过渡帧。
+- 实机 A/B 中，双层上下文把两处 0.7MP 边界 MAE 分别从 16.54 降到 4.12、从 16.76 降到 5.35。
+- 最终为 370 帧、24fps、约 15.42 秒；同时输出约 1120×640 精修合成片和 RTX VSR 1920×1080 成片。
+- 压缩预览已额外应用两次 100ms equal-power 音频 crossfade；workflow 原生输出可使用下述脚本做同样处理。
+
+<video controls muted playsinline width="720" src="./previews/Minimax_H3_MC22_RefineContext07_preview_540p.mp4"></video>
+
+[▶ 播放或下载 960×540 压缩预览（0.91 MB）](./previews/Minimax_H3_MC22_RefineContext07_preview_540p.mp4)
 
 ### 15 秒完整生成
 
@@ -34,6 +50,23 @@
 
 该文件保留为可复现 baseline。RIFE 适合处理身份、构图和运动方向已经一致时的轻微姿态/速度间隙；它不能修复换脸、换装、场景漂移、镜头轴线跳变或动作语义重置。遇到这些情况，应只重生成下一段。
 
+### Equal-power 音频 crossfade 后处理
+
+当前 ComfyUI 核心 `AudioConcat` 是硬拼。`tools/apply_equal_power_audio_crossfade.py` 会保留最终视频码流，只重新编码音频：对三段音频执行两次 100ms cosine/sine equal-power crossfade，并补偿重叠时长，使最终视频仍为精确 370 帧和约 15.42 秒。
+
+```powershell
+& <ComfyUI-python.exe> minimax-h3\tools\apply_equal_power_audio_crossfade.py `
+  --segment <segment-1.mp4> --frames 124 `
+  --segment <segment-2.mp4> --frames 119 `
+  --segment <segment-3.mp4> --frames 127 `
+  --video <combined-1080p.mp4> `
+  --output <combined-crossfade-1080p.mp4> `
+  --report <crossfade-report.json> `
+  --crossfade-ms 100
+```
+
+该工具只依赖 ComfyUI 环境现有的 PyAV 和 NumPy。默认不会重新编码视频；音频编码为 48kHz AAC。运行后应检查报告中的边界采样跳变，并实际监听两个边界。
+
 ## 推荐连续性流程
 
 对于 3 × 5 秒或更长的分段生成，推荐：
@@ -43,7 +76,8 @@
 → 上一段精修末帧作为下一段 first_frame
 → 先检查低分首遍边界
 → 只重生成失败的下一段
-→ 通过后再做 latent upscale + refine
+→ 通过后做 latent upscale + refine
+→ refine 阶段再次注入上一段精修 latent 尾部
 → 按边界选择 Direct / RIFE / Cut / Dissolve
 → 音频 crossfade
 → RTX VSR
@@ -84,13 +118,13 @@ The spirit finishes its current head tilt, then pushes the apple into her palm.
 The camera continues the same slow truck right with unchanged height and speed.
 ```
 
-连续版的 Segment 2、3 仍应保留 I2VA 首帧引用：
+使用 I2VA 末帧链的 baseline，Segment 2、3 应保留首帧引用：
 
 ```text
 For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.
 ```
 
-详细建议见 [`CONTINUITY_DESIGN.md`](./CONTINUITY_DESIGN.md)。
+Motion Context 版不再使用 `<Picture 1>`，避免 I2VA 首帧锚点与 pinned latent head 竞争。详细建议见 [`CONTINUITY_DESIGN.md`](./CONTINUITY_DESIGN.md)。
 
 ## 静态校验
 
@@ -122,7 +156,7 @@ python minimax-h3/tools/validate_workflows.py --strict minimax-h3
 - 支持 MiniMax H3 节点的较新版本 ComfyUI。
 - NVIDIA GPU；工作流按约 12GB 显存设计。
 - 足够的系统内存和磁盘空间用于模型、中间 latent 及视频输出。
-- 3×5 秒 workflow 需要 RIFE 帧插值节点。
+- 推荐的 3×5 秒 workflow 需要 `ComfyUI-H3-Motion-Context`；RIFE 仅为 baseline 所需。
 - 1080p 输出需要 NVIDIA RTX Video Super Resolution 节点和兼容硬件。
 
 如果缺少节点，导入 workflow 后可通过 ComfyUI Manager 的缺失节点安装功能补齐。RTX VSR 不可用时，可以绕过相关节点，直接保存 latent-refined 输出。
@@ -136,7 +170,7 @@ python minimax-h3/tools/validate_workflows.py --strict minimax-h3
 | Video VAE | `minimax_h3_video_vae_fp16.safetensors` | `ComfyUI/models/vae/` |
 | Audio VAE | `minimax_h3_audio_vae_fp32.safetensors` | `ComfyUI/models/vae/` |
 | LightX2V LoRA | `minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors` | `ComfyUI/models/loras/` |
-| H3 latent upscaler | `minimax_h3_latent_upscaler_3d_bf16.safetensors` | 以对应自定义节点的模型目录为准 |
+| H3 latent upscaler（精修/旧版 workflow） | `minimax_h3_latent_upscaler_3d_bf16.safetensors` | 以对应自定义节点的模型目录为准 |
 | RIFE（仅连续版） | `rife_v4.26.safetensors` | 以帧插值节点的模型目录为准 |
 
 MiniMax 官方 ComfyUI 模型：
@@ -186,7 +220,7 @@ non_diegetic_music: ...
 
 ## 输出
 
-默认输出位于 `ComfyUI/output/video/`。workflow 会分别保存精修原片和 RTX VSR 1080p 版本，实际文件名前缀可以在 Save Video 节点中修改。
+默认输出位于 `ComfyUI/output/video/`。推荐 workflow 会保存三个分段、Direct 合并片和 RTX VSR 1080p 版本；实际文件名前缀可以在 Save Video 节点中修改。
 
 ## 说明
 
