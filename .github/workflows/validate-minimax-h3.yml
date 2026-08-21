@@ -37,14 +37,15 @@ jobs:
           python-version: "3.12"
 
       - name: Install official Comfy validator
-        run: python -m pip install "comfy-cli==${COMFY_CLI_VERSION}"
+        run: >-
+          python -m pip install
+          "comfy-cli==${COMFY_CLI_VERSION}"
+          -r minimax-h3/requirements-ci.txt
 
       - name: Verify comfy-cli and compile validation helpers
         run: |
           python -m comfy_cli --version
-          python -m py_compile minimax-h3/tools/validate_workflows.py
-          python -m py_compile minimax-h3/tools/comfy_validate.py
-          python -m py_compile minimax-h3/tools/test_validate_workflows.py
+          python -m compileall -q minimax-h3/tools
 
       - name: Run workflow validator regression tests
         run: python -m unittest discover -s minimax-h3/tools -p "test_*.py"
@@ -60,7 +61,7 @@ jobs:
           --object-info minimax-h3/ci/object_info.json
 
       - name: Validate MiniMax H3 repository policies
-        run: python minimax-h3/tools/validate_workflows.py minimax-h3
+        run: python minimax-h3/tools/validate_workflows.py --strict minimax-h3
 
   live-comfy:
     name: Live ComfyUI schema validation

@@ -1,0 +1,4 @@
+# Media integration tests. Runtime generation should use the ComfyUI Python
+# environment, which already provides these packages.
+av==18.0.0
+numpy==2.5.1

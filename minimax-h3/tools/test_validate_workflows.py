@@ -55,6 +55,33 @@ class ValidateWorkflowPathsTests(unittest.TestCase):
         self.assertEqual([f.code for f in findings], ["SKIPPED_AUXILIARY_JSON"])
         self.assertEqual(findings[0].severity, "INFO")
 
+    def test_streaming_workflows_satisfy_memory_contract(self) -> None:
+        workflow_root = MODULE_PATH.parent.parent
+        paths = [
+            workflow_root / "Minimax_H3_60s_Streaming_Init_RefineContext0.7MP_RTXVSR_1080p_12GB.json",
+            workflow_root / "Minimax_H3_60s_Streaming_Continue_RefineContext0.7MP_RTXVSR_1080p_12GB.json",
+        ]
+        findings = validator.validate_paths(paths)
+
+        self.assertFalse(
+            any(f.severity in ("WARN", "ERROR") for f in findings),
+            [f.render() for f in findings],
+        )
+        self.assertEqual(
+            sum(f.code == "STREAMING_MEMORY_SCOPE" for f in findings),
+            2,
+            [f.render() for f in findings],
+        )
+
+    def test_all_published_workflows_are_strict_clean(self) -> None:
+        workflow_root = MODULE_PATH.parent.parent
+        findings = validator.validate_paths(sorted(workflow_root.glob("*.json")))
+
+        self.assertFalse(
+            any(f.severity in ("WARN", "ERROR") for f in findings),
+            [f.render() for f in findings],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -73,7 +73,9 @@ class WorkflowValidator:
         self._check_refine_schedulers()
         self._check_latent_megapixels()
 
-        if self._looks_like_continuity_workflow():
+        if self._looks_like_streaming_workflow():
+            self._check_streaming_workflow()
+        elif self._looks_like_continuity_workflow():
             self._check_continuity_prompts()
             self._check_boundary_pipeline()
             self._check_audio_pipeline()
@@ -283,6 +285,160 @@ class WorkflowValidator:
             text += " " + str(info.get("name", "")).lower()
         return "continuous" in text or "3x5" in text or "3×5" in text
 
+    def _looks_like_streaming_workflow(self) -> bool:
+        return "streaming_" in self.path.name.lower()
+
+    def _uses_motion_context(self) -> bool:
+        if "motioncontext" in self.path.name.lower():
+            return True
+        return any(
+            "motioncontext" in str(ref.node.get("type", "")).lower()
+            or "motion context" in str(ref.node.get("title", "")).lower()
+            for ref in self._iter_nodes()
+        )
+
+    @staticmethod
+    def _widget_values(node: dict[str, Any]) -> list[Any]:
+        values = node.get("widgets_values")
+        return values if isinstance(values, list) else []
+
+    def _check_streaming_workflow(self) -> None:
+        nodes = [node for node in self.document.get("nodes", []) if isinstance(node, dict)]
+        is_init = "streaming_init" in self.path.name.lower()
+        is_continue = "streaming_continue" in self.path.name.lower()
+        save_nodes = [node for node in nodes if node.get("type") == "MiniMaxH3MotionContextSaveLatent"]
+        load_nodes = [node for node in nodes if node.get("type") == "MiniMaxH3MotionContextLoadLatent"]
+        full_batch_nodes = [node for node in nodes if node.get("type") in ("ImageBatch", "AudioConcat")]
+
+        if len(save_nodes) != 2:
+            self.add("ERROR", "STREAMING_SAVE_COUNT", "root", f"expected 2 AV latent Save nodes, found {len(save_nodes)}")
+        if full_batch_nodes:
+            self.add(
+                "ERROR",
+                "STREAMING_ACCUMULATOR",
+                "root",
+                "streaming workflow must not contain top-level ImageBatch or AudioConcat accumulators",
+            )
+
+        save_values = [self._widget_values(node) for node in save_nodes]
+        save_prefixes = {str(values[0]) for values in save_values if len(values) >= 2}
+        save_indexes = {int(values[1]) for values in save_values if len(values) >= 2 and isinstance(values[1], int)}
+        if len(save_prefixes) != 2 or not any("/base/" in value for value in save_prefixes) or not any(
+            "/refined/" in value for value in save_prefixes
+        ):
+            self.add(
+                "ERROR",
+                "STREAMING_CONTEXT_SLOTS",
+                "root",
+                f"base/refined Save prefixes must be distinct, got {sorted(save_prefixes)}",
+            )
+        if len(save_indexes) != 1:
+            self.add("ERROR", "STREAMING_SAVE_INDEX_MISMATCH", "root", f"Save indexes differ: {sorted(save_indexes)}")
+
+        if is_init:
+            if load_nodes:
+                self.add("ERROR", "STREAMING_INIT_LOAD", "root", "Init workflow must not load a previous latent")
+            if save_indexes != {1}:
+                self.add("ERROR", "STREAMING_INIT_INDEX", "root", f"Init workflow must save slot 1, got {sorted(save_indexes)}")
+            image_trims = [node for node in nodes if node.get("type") == "ImageFromBatch"]
+            audio_trims = [node for node in nodes if node.get("type") == "TrimAudioDuration"]
+            image_values = self._widget_values(image_trims[0]) if len(image_trims) == 1 else []
+            audio_values = self._widget_values(audio_trims[0]) if len(audio_trims) == 1 else []
+            if image_values[:2] != [10, 131]:
+                self.add(
+                    "ERROR",
+                    "STREAMING_INIT_FRAME_TRIM",
+                    "root",
+                    f"Init must drop 10-frame pre-roll and keep 131, got {image_values[:2]}",
+                )
+            if len(audio_values) < 2 or not math.isclose(float(audio_values[0]), 10 / 24, abs_tol=1e-9) or not math.isclose(
+                float(audio_values[1]), 131 / 24, abs_tol=1e-9
+            ):
+                self.add(
+                    "ERROR",
+                    "STREAMING_INIT_AUDIO_TRIM",
+                    "root",
+                    f"Init audio must drop 10/24s and keep 131/24s, got {audio_values[:2]}",
+                )
+
+        if is_continue:
+            if len(load_nodes) != 2:
+                self.add("ERROR", "STREAMING_LOAD_COUNT", "root", f"expected 2 AV latent Load nodes, found {len(load_nodes)}")
+            load_values = [self._widget_values(node) for node in load_nodes]
+            load_paths = {str(values[0]) for values in load_values if len(values) >= 2}
+            load_indexes = {int(values[1]) for values in load_values if len(values) >= 2 and isinstance(values[1], int)}
+            if len(load_paths) != 2 or not any(value.endswith("/base") for value in load_paths) or not any(
+                value.endswith("/refined") for value in load_paths
+            ):
+                self.add(
+                    "ERROR",
+                    "STREAMING_LOAD_SLOTS",
+                    "root",
+                    f"base/refined Load paths must be distinct, got {sorted(load_paths)}",
+                )
+            if len(load_indexes) != 1:
+                self.add("ERROR", "STREAMING_LOAD_INDEX_MISMATCH", "root", f"Load indexes differ: {sorted(load_indexes)}")
+            elif len(save_indexes) == 1 and next(iter(save_indexes)) != next(iter(load_indexes)) + 1:
+                self.add(
+                    "ERROR",
+                    "STREAMING_INDEX_ORDER",
+                    "root",
+                    f"Save index must equal Load index + 1, got Load {sorted(load_indexes)}, Save {sorted(save_indexes)}",
+                )
+            clip_nodes = [node for node in nodes if str(node.get("title", "")).startswith("Clip N")]
+            if len(clip_nodes) != 1 or self._input_link(clip_nodes[0], "context_latent") is None or self._input_link(
+                clip_nodes[0], "refined_context_latent"
+            ) is None:
+                self.add(
+                    "ERROR",
+                    "STREAMING_DUAL_CONTEXT_LINK",
+                    "root",
+                    "Continue clip must receive both base and refined context latent links",
+                )
+            image_trims = [node for node in nodes if node.get("type") == "ImageFromBatch"]
+            audio_trims = [node for node in nodes if node.get("type") == "TrimAudioDuration"]
+            image_values = self._widget_values(image_trims[0]) if len(image_trims) == 1 else []
+            audio_values = self._widget_values(audio_trims[0]) if len(audio_trims) == 1 else []
+            if image_values[:2] != [0, 119]:
+                self.add(
+                    "ERROR",
+                    "STREAMING_CONTINUE_FRAME_TRIM",
+                    "root",
+                    f"Continue must expose a script-overridable 0..119 deliverable crop, got {image_values[:2]}",
+                )
+            if len(audio_values) < 2 or not math.isclose(float(audio_values[0]), 0.0, abs_tol=1e-9) or not math.isclose(
+                float(audio_values[1]), 119 / 24, abs_tol=1e-9
+            ):
+                self.add(
+                    "ERROR",
+                    "STREAMING_CONTINUE_AUDIO_TRIM",
+                    "root",
+                    f"Continue audio must expose a script-overridable 0..119/24s crop, got {audio_values[:2]}",
+                )
+
+        prompt_nodes = [node for node in nodes if str(node.get("title", "")).startswith("Clip ")]
+        prompts = [value for node in prompt_nodes if (value := self._first_prompt(node))]
+        if not prompts or not all(
+            "integrated_multimodal_description:" in value
+            and "overall_soundscape:" in value
+            and "non_diegetic_music:" in value
+            and "without a reset" in value.lower()
+            for value in prompts
+        ):
+            self.add(
+                "ERROR",
+                "STREAMING_PROMPT_STRUCTURE",
+                "root",
+                "clip prompt must contain all three H3 fields and explicit no-reset continuity language",
+            )
+
+        self.add(
+            "INFO",
+            "STREAMING_MEMORY_SCOPE",
+            "root",
+            "one clip per queue, paired base/refined AV latent persistence, and no top-level full-video accumulator",
+        )
+
     @staticmethod
     def _first_prompt(node: dict[str, Any]) -> str:
         values = node.get("widgets_values")
@@ -313,7 +469,7 @@ class WorkflowValidator:
                 continue
             scope, prompt = item
             lowered = prompt.lower()
-            if "<picture 1>" not in lowered:
+            if "<picture 1>" not in lowered and not self._uses_motion_context():
                 self.add(
                     "WARN",
                     "MISSING_FIRST_FRAME_REFERENCE",
@@ -387,7 +543,14 @@ class WorkflowValidator:
             if total_match and "Add Segment 3" in title:
                 advertised_total = int(total_match.group("frames"))
 
-        if not rife_nodes:
+        if not rife_nodes and self._uses_motion_context():
+            self.add(
+                "INFO",
+                "DIRECT_MOTION_CONTEXT_STITCH",
+                "root",
+                "Motion Context workflow intentionally uses Direct stitching; RIFE is not required",
+            )
+        elif not rife_nodes:
             self.add("WARN", "NO_RIFE_BRANCH", "root", "continuity workflow has no RIFE interpolation branch")
         elif len(rife_nodes) != 2:
             self.add("WARN", "RIFE_BOUNDARY_COUNT", "root", f"expected 2 RIFE boundaries, found {len(rife_nodes)}")
@@ -431,7 +594,7 @@ class WorkflowValidator:
                 values = self._numeric_widgets(ref.node)
                 if len(values) >= 2:
                     expected = 1.0 / 24.0
-                    if not math.isclose(values[0], expected, abs_tol=0.01):
+                    if not math.isclose(values[0], expected, abs_tol=0.01) and not self._uses_motion_context():
                         self.add(
                             "WARN",
                             "AUDIO_BOUNDARY_TRIM",
@@ -446,7 +609,14 @@ class WorkflowValidator:
             if "crossfade" in node_type.lower() or "crossfade" in str(ref.node.get("title", "")).lower():
                 has_crossfade = True
 
-        if has_concat and not has_crossfade:
+        if has_concat and not has_crossfade and self._uses_motion_context():
+            self.add(
+                "INFO",
+                "AUDIO_CROSSFADE_POSTPROCESS",
+                "root",
+                "workflow preserves exact Direct frame count; documented helper applies equal-power audio crossfades",
+            )
+        elif has_concat and not has_crossfade:
             self.add(
                 "WARN",
                 "HARD_AUDIO_CONCAT",
@@ -456,7 +626,7 @@ class WorkflowValidator:
                     "equal-power crossfade for ambience/music boundaries when a compatible node is available"
                 ),
             )
-        if len(trim_nodes) not in (0, 2):
+        if len(trim_nodes) not in (0, 2) and not self._uses_motion_context():
             self.add("WARN", "AUDIO_TRIM_COUNT", "root", f"expected 2 boundary audio trims, found {len(trim_nodes)}")
 
 

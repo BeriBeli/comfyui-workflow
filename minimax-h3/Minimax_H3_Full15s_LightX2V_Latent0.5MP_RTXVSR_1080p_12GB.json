@@ -2063,7 +2063,7 @@
             ],
             "widgets_values_named": {
               "model_name": "minimax_h3_latent_upscaler_3d_bf16.safetensors",
-              "target_megapixels": 0.7,
+              "target_megapixels": 0.5,
               "align": 2,
               "device": "cuda",
               "precision": "bf16"
@@ -2207,7 +2207,7 @@
                 "widget": {
                   "name": "steps"
                 },
-                "link": 235
+                "link": null
               },
               {
                 "localized_name": "降噪",

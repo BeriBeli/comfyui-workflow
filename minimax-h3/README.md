@@ -24,6 +24,24 @@
 
 [▶ 播放或下载 960×540 压缩预览（0.91 MB）](./previews/Minimax_H3_MC22_RefineContext07_preview_540p.mp4)
 
+### 任意时长防 OOM 流式生成
+
+长视频版本不在一张图中累积全部解码帧，而是每次 Queue 一个分段，通过磁盘上的 base/refined H3 AV latent 继续下一段：
+
+- [`Streaming Init · Clip 1`](./Minimax_H3_60s_Streaming_Init_RefineContext0.7MP_RTXVSR_1080p_12GB.json)
+- [`Streaming Continue · Clips 2–N`](./Minimax_H3_60s_Streaming_Continue_RefineContext0.7MP_RTXVSR_1080p_12GB.json)
+- [`任意时长脚本、分段 prompt 格式和断点恢复`](./STREAMING_ARBITRARY_DURATION.md)
+- [`完整运行、重试和组装说明`](./STREAMING_60S.md)
+- [`12 段连续 prompts`](./Minimax_H3_60s_Streaming_Prompts.md)
+
+Clip 1 最多交付 131 帧，后续每段最多交付 119 帧，尾段按目标总帧数精确裁切。`tools/run_h3_streaming.py` 可通过 comfy-mcp 逐段注入 prompt、执行、保存双层 AV latent、释放显存和断点恢复。60 秒只是现成示例：`131 + 11 × 119 = 1440` 帧。
+
+第一版 60 秒输出的实际长度为 1423 帧、24fps、约 59.29 秒。以下预览从该非 v2 的 1080p 成片压缩得到；没有补帧或改动内容：
+
+<video controls muted playsinline width="720" src="./previews/Minimax_H3_60s_preview_540p.mp4"></video>
+
+[▶ 播放或下载 960×540 压缩预览（约 3.49 MB）](./previews/Minimax_H3_60s_preview_540p.mp4)
+
 ### 15 秒完整生成
 
 [`Minimax_H3_Full15s_LightX2V_Latent0.5MP_RTXVSR_1080p_12GB.json`](./Minimax_H3_Full15s_LightX2V_Latent0.5MP_RTXVSR_1080p_12GB.json)
@@ -35,20 +53,6 @@
 - 同时输出 latent-refined 视频和 RTX VSR 1920×1080 视频。
 
 当前 JSON 的文件名、位置序列化值和命名序列化值可能对 0.5MP / 0.7MP 表述不一致。导入后请确认实际节点值；正式发布前应在 ComfyUI 中重新输入目标值并导出，使文件名、workflow info、节点和文档一致。
-
-### 3 × 5 秒连续生成（RIFE baseline）
-
-[`Minimax_H3_3x5s_Continuous_RIFE4F_Latent0.7MP_RTXVSR_1080p_12GB.json`](./Minimax_H3_3x5s_Continuous_RIFE4F_Latent0.7MP_RTXVSR_1080p_12GB.json)
-
-- Segment 1 使用 T2VA。
-- Segment 2、3 自动使用上一段精修视频的末帧作为 I2VA 首帧。
-- 每段先以 0.3MP、Turbo 8 steps 生成，再放大至约 0.7MP，以 6 steps、denoise 0.30 精修。
-- 两个分段边界分别用 RIFE v4.26 生成 4 张中间帧，并裁掉等量边界原帧。
-- 合并后为 370 帧、24fps，时长约 15.42 秒。
-- 分段音频会同步裁切并硬拼接。
-- 同时输出约 1120×640 合并视频和 RTX VSR 1920×1080 视频。
-
-该文件保留为可复现 baseline。RIFE 适合处理身份、构图和运动方向已经一致时的轻微姿态/速度间隙；它不能修复换脸、换装、场景漂移、镜头轴线跳变或动作语义重置。遇到这些情况，应只重生成下一段。
 
 ### Equal-power 音频 crossfade 后处理
 
@@ -93,7 +97,7 @@
 | Dissolve | 时间/空间变化，需要柔和过渡 |
 | Retake | 换脸、构图漂移、运动反向或场景重置 |
 
-当前 baseline 固定使用 RIFE；后续版本将把 Direct/RIFE/Cut 作为显式可选策略。
+当前推荐 workflow 固定使用 Direct。RIFE 只适合语义已经一致时的小幅姿态或速度间隙，不包含在精简后的推荐 workflow 中。
 
 ## 连续性 Prompt 模板
 
@@ -146,7 +150,7 @@ python minimax-h3/tools/validate_workflows.py --strict minimax-h3
 - 二次 refine scheduler 是否残留外部 `steps` link；
 - latent MP 的文件名、位置值和命名值是否一致；
 - 连续段 prompt 是否包含首帧引用和连续性锚点；
-- RIFE 倍率、过渡帧裁切和最终帧数；
+- 若目录中存在旧版 RIFE workflow，则检查其倍率、过渡帧裁切和最终帧数；
 - 音频硬拼接提示。
 
 静态检查不能替代 ComfyUI 实机运行和样片 A/B。
@@ -156,7 +160,7 @@ python minimax-h3/tools/validate_workflows.py --strict minimax-h3
 - 支持 MiniMax H3 节点的较新版本 ComfyUI。
 - NVIDIA GPU；工作流按约 12GB 显存设计。
 - 足够的系统内存和磁盘空间用于模型、中间 latent 及视频输出。
-- 推荐的 3×5 秒 workflow 需要 `ComfyUI-H3-Motion-Context`；RIFE 仅为 baseline 所需。
+- 推荐的 3×5 秒 workflow 需要 `ComfyUI-H3-Motion-Context`。
 - 1080p 输出需要 NVIDIA RTX Video Super Resolution 节点和兼容硬件。
 
 如果缺少节点，导入 workflow 后可通过 ComfyUI Manager 的缺失节点安装功能补齐。RTX VSR 不可用时，可以绕过相关节点，直接保存 latent-refined 输出。
@@ -171,14 +175,15 @@ python minimax-h3/tools/validate_workflows.py --strict minimax-h3
 | Audio VAE | `minimax_h3_audio_vae_fp32.safetensors` | `ComfyUI/models/vae/` |
 | LightX2V LoRA | `minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors` | `ComfyUI/models/loras/` |
 | H3 latent upscaler（精修/旧版 workflow） | `minimax_h3_latent_upscaler_3d_bf16.safetensors` | 以对应自定义节点的模型目录为准 |
-| RIFE（仅连续版） | `rife_v4.26.safetensors` | 以帧插值节点的模型目录为准 |
 
 MiniMax 官方 ComfyUI 模型：
 
 - [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3)
 - [MiniMax H3 介绍](https://www.minimax.io/blog/minimax-h3)
 
-后续应补充每个自定义节点仓库、commit、Manager 包名、模型 SHA-256 和最后测试的 ComfyUI/frontend 版本，避免仅凭节点类名无法复现。
+经过实机验证的 ComfyUI/frontend、节点提交、模型 SHA-256 和更新限制统一记录在
+[`COMPATIBILITY.md`](./COMPATIBILITY.md)。特别注意：Latent Upscaler 必须固定在兼容提交
+`8b5058a`；其当前 `main` 已删除本 workflow 使用的旧节点类型，不能直接执行 Manager Update。
 
 ## 使用方法
 
