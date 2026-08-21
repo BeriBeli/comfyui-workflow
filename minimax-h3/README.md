@@ -36,7 +36,7 @@
 
 Clip 1 最多交付 131 帧，后续每段最多交付 119 帧，尾段按目标总帧数精确裁切。`tools/run_h3_streaming.py` 可通过 comfy-mcp 逐段注入 prompt、执行、保存双层 AV latent、释放显存和断点恢复。60 秒只是现成示例：`131 + 11 × 119 = 1440` 帧。
 
-第一版 60 秒输出的实际长度为 1423 帧、24fps、约 59.29 秒。以下预览从该非 v2 的 1080p 成片压缩得到；没有补帧或改动内容：
+60 秒输出的实际长度为 1423 帧、24fps、约 59.29 秒。
 
 <video controls muted playsinline width="720" src="./previews/Minimax_H3_60s_preview_540p.mp4"></video>
 
