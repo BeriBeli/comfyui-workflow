@@ -20,7 +20,7 @@
 - 最终为 370 帧、24fps、约 15.42 秒；同时输出约 1120×640 精修合成片和 RTX VSR 1920×1080 成片。
 - 压缩预览已额外应用两次 100ms equal-power 音频 crossfade；workflow 原生输出可使用下述脚本做同样处理。
 
-<video controls muted playsinline width="720" src="./previews/Minimax_H3_MC22_RefineContext07_preview_540p.mp4"></video>
+https://github.com/user-attachments/assets/d39b5e3f-c7dc-4aab-ac20-920809fca9a2
 
 [▶ 播放或下载 960×540 压缩预览（0.91 MB）](./previews/Minimax_H3_MC22_RefineContext07_preview_540p.mp4)
 
@@ -38,7 +38,7 @@ Clip 1 最多交付 131 帧，后续每段最多交付 119 帧，尾段按目标
 
 60 秒输出的实际长度为 1423 帧、24fps、约 59.29 秒。
 
-<video controls muted playsinline width="720" src="./previews/Minimax_H3_60s_preview_540p.mp4"></video>
+https://github.com/user-attachments/assets/af11744a-7723-4584-9dab-577cb37c6148
 
 [▶ 播放或下载 960×540 压缩预览（约 3.49 MB）](./previews/Minimax_H3_60s_preview_540p.mp4)
 
